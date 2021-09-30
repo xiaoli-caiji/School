@@ -34,7 +34,7 @@ namespace School.Web
             services.AddMvc();
             //AutoMapper这个以来的包：AutoMapper.Extensions.Microsoft.DependencyInjection
             services.AddAutoMapper(typeof(MapperProfile));
-            services.TryAddScoped(typeof(IRepository<,>), typeof(Repository<,>));
+            services.TryAddScoped(typeof(IRepository<>), typeof(Repository<>));
             services.TryAddScoped<ISchoolContracts, SchoolService>();
             //services.TryAddScoped<IRepository<User>, Repository<User>>();
             //services.TryAddScoped<IRepository<UserRole>, Repository<UserRole>>();

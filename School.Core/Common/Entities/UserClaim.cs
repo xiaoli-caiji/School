@@ -12,10 +12,9 @@ namespace SchoolCore.Entities
     {
         public int UserId { get; set; }
 
-        [Required]//年级、课程、奖学金
+        //年级、课程、奖学金
         public string UserClaimType { get; set; }
 
-        [Required]
         public string UserClaimValue { get; set; }
 
         [ForeignKey("UserId")]

@@ -9,8 +9,8 @@ using System.Threading.Tasks;
 
 namespace School.Core.Repository
 {
-    public class Repository<TEntity, key> : IRepository<TEntity, key>
-        where TEntity : class, IEntity<key>
+    public class Repository<TEntity> : IRepository<TEntity>
+        where TEntity : class
     {
         private readonly BaseDbContext _dbContext;
         private readonly DbSet<TEntity> _dbSet;
@@ -20,6 +20,13 @@ namespace School.Core.Repository
             //_dbContext.ChangeTracker.LazyLoadingEnabled = true;
             _dbSet = _dbContext.Set<TEntity>();
             
+        }
+
+        public async Task<AjaxResult> AddEntitiesAsync(TEntity entity)
+        {
+            await _dbContext.AddAsync(entity);
+            await _dbContext.SaveChangesAsync();
+            return new AjaxResult("数据插入成功！", AjaxResultType.Success);
         }
 
         public IQueryable<TEntity> GetEntities<T>(Expression<Func<TEntity, bool>> expression)
@@ -56,7 +63,7 @@ namespace School.Core.Repository
             }
             return new AjaxResult(content, resultType);
         }
-        public async Task<AjaxResult> DeleteEntities(TEntity entity)
+        public async Task<AjaxResult> DeleteEntitiesAsync(TEntity entity)
         {
             _dbContext.Remove(entity);
             await _dbContext.SaveChangesAsync();

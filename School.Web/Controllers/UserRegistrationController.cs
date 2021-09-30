@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using School.Data;
 using SchoolCore.Service;
 using SchoolCore.UserIndex.Dtos;
 using System.Linq;
@@ -15,10 +16,11 @@ namespace School.Web.Controllers
             _schoolContracts = schoolContracts;
         }
         [HttpPost]
-        public async Task<IActionResult> StudentRegistration(StudentRegistrationDto student)
+        public async Task<AjaxResult> StudentRegistration(StudentRegistrationDto student)
         {//弹窗的内容：Content，数据：data
             var registrationResult = await _schoolContracts.StudentRegistration(student);
-            return View(registrationResult);
+
+            return registrationResult;
 
         }
 

@@ -1,5 +1,6 @@
 using System;
 using System.ComponentModel;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace EntityConfigurationBase
 {  
@@ -12,7 +13,7 @@ namespace EntityConfigurationBase
         /// <summary>
         /// 获取或设置 编号
         /// </summary>
-        [DisplayName("编号")]
+        [DisplayName("编号"), DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int Id { get; set; }
 
         /// <summary>

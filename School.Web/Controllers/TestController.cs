@@ -10,9 +10,9 @@ namespace School.Web.Controllers
     [Route("/api/[controller]/[action]")]
     public class TestController : Controller
     {
-        private readonly IRepository<User,int> _repository;
+        private readonly IRepository<UserRole> _repository;
         private readonly IMapper _mapper;
-        public TestController(IRepository<User, int> repository,IMapper mapper)
+        public TestController(IRepository<UserRole> repository,IMapper mapper)
         {
             _repository = repository;
             _mapper = mapper;
@@ -22,8 +22,8 @@ namespace School.Web.Controllers
         public void GetNull(UserInputDto userInput)
         {
             var user = _mapper.Map<User>(userInput);
-            var res = _repository.GetEntities<User>(u => u.UserCode == user.UserCode);
-            var w = res.Select(u => u.UserRoles).ToList();
+            var res = _repository.GetEntities<User>(u => u.User.UserCode == user.UserCode);
+            var w = res.Select(u => u.Role.RoleName).ToList();
             
             //var res = 
 

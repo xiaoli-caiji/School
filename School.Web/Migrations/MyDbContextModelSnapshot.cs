@@ -33,18 +33,18 @@ namespace School.Web.Migrations
 
             modelBuilder.Entity("School.Core.Common.Entities.ReportCards", b =>
                 {
-                    b.Property<Guid>("Id")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("char(36)");
+                        .HasColumnType("int");
 
-                    b.Property<Guid>("CourseId")
-                        .HasColumnType("char(36)");
+                    b.Property<int>("CourseId")
+                        .HasColumnType("int");
 
                     b.Property<double?>("Report")
                         .HasColumnType("double");
 
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("char(36)");
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
 
                     b.HasKey("Id");
 
@@ -57,18 +57,15 @@ namespace School.Web.Migrations
 
             modelBuilder.Entity("SchoolCore.Entities.AClass", b =>
                 {
-                    b.Property<Guid>("Id")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("char(36)");
+                        .HasColumnType("int");
 
                     b.Property<string>("AClassName")
                         .HasColumnType("longtext");
 
-                    b.Property<Guid>("AClassParentId")
-                        .HasColumnType("char(36)");
-
-                    b.Property<Guid?>("AcademicId")
-                        .HasColumnType("char(36)");
+                    b.Property<int?>("AcademicId")
+                        .HasColumnType("int");
 
                     b.HasKey("Id");
 
@@ -79,15 +76,15 @@ namespace School.Web.Migrations
 
             modelBuilder.Entity("SchoolCore.Entities.Academic", b =>
                 {
-                    b.Property<Guid>("Id")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("char(36)");
+                        .HasColumnType("int");
 
                     b.Property<string>("AcademicName")
                         .HasColumnType("longtext");
 
-                    b.Property<Guid>("AcademicParentId")
-                        .HasColumnType("char(36)");
+                    b.Property<int>("AcademicParentId")
+                        .HasColumnType("int");
 
                     b.HasKey("Id");
 
@@ -96,37 +93,39 @@ namespace School.Web.Migrations
 
             modelBuilder.Entity("SchoolCore.Entities.AcademicCourse", b =>
                 {
-                    b.Property<Guid>("Id")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("char(36)");
+                        .HasColumnType("int");
 
-                    b.Property<Guid>("AcademicId")
-                        .HasColumnType("char(36)");
+                    b.Property<int>("AcademicId")
+                        .HasColumnType("int");
 
-                    b.Property<Guid>("CourseId")
-                        .HasColumnType("char(36)");
+                    b.Property<int>("CourseId")
+                        .HasColumnType("int");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CourseId");
+                    b.HasIndex("AcademicId");
 
-                    b.HasIndex("AcademicId", "CourseId")
-                        .IsUnique();
+                    b.HasIndex("CourseId");
 
                     b.ToTable("AcademicAndCourses");
                 });
 
             modelBuilder.Entity("SchoolCore.Entities.Course", b =>
                 {
-                    b.Property<Guid>("Id")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("char(36)");
+                        .HasColumnType("int");
 
                     b.Property<int>("CourseCapacity")
                         .HasColumnType("int");
 
                     b.Property<int>("CourseChoosenNumber")
                         .HasColumnType("int");
+
+                    b.Property<string>("CourseCode")
+                        .HasColumnType("longtext");
 
                     b.Property<double>("CourseCredit")
                         .HasColumnType("double");
@@ -137,14 +136,11 @@ namespace School.Web.Migrations
                     b.Property<string>("CourseName")
                         .HasColumnType("longtext");
 
-                    b.Property<string>("CourseNumber")
-                        .HasColumnType("longtext");
-
                     b.Property<string>("CourseTime")
                         .HasColumnType("longtext");
 
-                    b.Property<Guid?>("TeachingTeacherId")
-                        .HasColumnType("char(36)");
+                    b.Property<int?>("TeachingTeacherId")
+                        .HasColumnType("int");
 
                     b.HasKey("Id");
 
@@ -155,9 +151,9 @@ namespace School.Web.Migrations
 
             modelBuilder.Entity("SchoolCore.Entities.Department", b =>
                 {
-                    b.Property<Guid>("Id")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("char(36)");
+                        .HasColumnType("int");
 
                     b.Property<string>("DepartmentFunctions")
                         .HasColumnType("longtext");
@@ -165,8 +161,8 @@ namespace School.Web.Migrations
                     b.Property<string>("DepartmentName")
                         .HasColumnType("longtext");
 
-                    b.Property<Guid>("DepartmentParentId")
-                        .HasColumnType("char(36)");
+                    b.Property<int>("DepartmentParentId")
+                        .HasColumnType("int");
 
                     b.HasKey("Id");
 
@@ -175,9 +171,9 @@ namespace School.Web.Migrations
 
             modelBuilder.Entity("SchoolCore.Entities.Role", b =>
                 {
-                    b.Property<Guid>("Id")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("char(36)");
+                        .HasColumnType("int");
 
                     b.Property<string>("RoleName")
                         .HasColumnType("longtext");
@@ -192,20 +188,18 @@ namespace School.Web.Migrations
 
             modelBuilder.Entity("SchoolCore.Entities.RoleClaim", b =>
                 {
-                    b.Property<Guid>("Id")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("char(36)");
+                        .HasColumnType("int");
 
                     b.Property<string>("RoleClaimType")
-                        .IsRequired()
                         .HasColumnType("longtext");
 
                     b.Property<string>("RoleClaimValue")
-                        .IsRequired()
                         .HasColumnType("longtext");
 
-                    b.Property<Guid>("RoleId")
-                        .HasColumnType("char(36)");
+                    b.Property<int>("RoleId")
+                        .HasColumnType("int");
 
                     b.HasKey("Id");
 
@@ -216,18 +210,18 @@ namespace School.Web.Migrations
 
             modelBuilder.Entity("SchoolCore.Entities.User", b =>
                 {
-                    b.Property<Guid>("Id")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("char(36)");
+                        .HasColumnType("int");
 
-                    b.Property<Guid?>("AClassId")
-                        .HasColumnType("char(36)");
+                    b.Property<int?>("AClassId")
+                        .HasColumnType("int");
 
                     b.Property<int>("Age")
                         .HasColumnType("int");
 
-                    b.Property<Guid?>("DepartmentId")
-                        .HasColumnType("char(36)");
+                    b.Property<int?>("DepartmentId")
+                        .HasColumnType("int");
 
                     b.Property<string>("IdCardNumber")
                         .HasColumnType("longtext");
@@ -244,8 +238,8 @@ namespace School.Web.Migrations
                     b.Property<string>("Sex")
                         .HasColumnType("longtext");
 
-                    b.Property<Guid?>("UserAcademicId")
-                        .HasColumnType("char(36)");
+                    b.Property<int?>("UserAcademicId")
+                        .HasColumnType("int");
 
                     b.Property<string>("UserCode")
                         .HasColumnType("longtext");
@@ -263,20 +257,18 @@ namespace School.Web.Migrations
 
             modelBuilder.Entity("SchoolCore.Entities.UserClaim", b =>
                 {
-                    b.Property<Guid>("Id")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("char(36)");
+                        .HasColumnType("int");
 
                     b.Property<string>("UserClaimType")
-                        .IsRequired()
                         .HasColumnType("longtext");
 
                     b.Property<string>("UserClaimValue")
-                        .IsRequired()
                         .HasColumnType("longtext");
 
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("char(36)");
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
 
                     b.HasKey("Id");
 
@@ -287,37 +279,36 @@ namespace School.Web.Migrations
 
             modelBuilder.Entity("SchoolCore.Entities.UserCourse", b =>
                 {
-                    b.Property<Guid>("Id")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("char(36)");
+                        .HasColumnType("int");
 
-                    b.Property<Guid>("CourseId")
-                        .HasColumnType("char(36)");
+                    b.Property<int>("CourseId")
+                        .HasColumnType("int");
 
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("char(36)");
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
 
                     b.HasKey("Id");
 
                     b.HasIndex("CourseId");
 
-                    b.HasIndex("UserId", "CourseId")
-                        .IsUnique();
+                    b.HasIndex("UserId");
 
                     b.ToTable("UserCourses");
                 });
 
             modelBuilder.Entity("SchoolCore.Entities.UserRole", b =>
                 {
-                    b.Property<Guid>("Id")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("char(36)");
+                        .HasColumnType("int");
 
-                    b.Property<Guid>("RoleId")
-                        .HasColumnType("char(36)");
+                    b.Property<int>("RoleId")
+                        .HasColumnType("int");
 
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("char(36)");
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
 
                     b.HasKey("Id");
 

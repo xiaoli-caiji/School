@@ -20,27 +20,29 @@ namespace SchoolCore.Service
     {
         //private readonly BaseDbContext _repository;
         private readonly IMapper _mapper;
-        private readonly IRepository<User,int> _userRepository;
-        private readonly IRepository<UserRole, int> _userRoleRepository;
-        private readonly IRepository<Academic, int> _academicRepository;
-        //private readonly IRepository<AClass> _aClassRepository;
-        private readonly IRepository<Course, int> _courseRepository;
-        private readonly IRepository<UserCourse, int> _userCourseRepository;
-        private readonly IRepository<ReportCards, int> _reportCardsRepository;
+        private readonly IRepository<User> _userRepository;
+        private readonly IRepository<Role> _roleRepository;
+        private readonly IRepository<UserRole> _userRoleRepository;
+        private readonly IRepository<Academic> _academicRepository;
+        private readonly IRepository<AClass> _aClassRepository;
+        private readonly IRepository<Course> _courseRepository;
+        private readonly IRepository<UserCourse> _userCourseRepository;
+        private readonly IRepository<ReportCards> _reportCardsRepository;
+        //private readonly
 
-        public SchoolService(IMapper mapper/*, IRepository<User> userRepository, IRepository<UserRole> userRoleRepositoy,
+        public SchoolService(IMapper mapper, IRepository<User> userRepository, IRepository<UserRole> userRoleRepositoy,
             IRepository<Academic> academicRepository, IRepository<AClass> aClassRepository, IRepository<Course> courseRepository,
-            IRepository<UserCourse> userCourseRepository, IRepository<ReportCards> reportCardsRepository*/)
-        {
-            //_repository = context;
+            IRepository<UserCourse> userCourseRepository, IRepository<ReportCards> reportCardsRepository, IRepository<Role> roleRepository)
+        {           
             _mapper = mapper;
-            //_userRepository = userRepository;
-            //_userRoleRepository = userRoleRepositoy;
-            //_academicRepository = academicRepository;
-            ////_aClassRepository = aClassRepository;
-            //_courseRepository = courseRepository;
-            //_userCourseRepository = userCourseRepository;
-            //_reportCardsRepository = reportCardsRepository;
+            _userRepository = userRepository;
+            _roleRepository = roleRepository;
+            _userRoleRepository = userRoleRepositoy;
+            _academicRepository = academicRepository;
+            _aClassRepository = aClassRepository;
+            _courseRepository = courseRepository;
+            _userCourseRepository = userCourseRepository;
+            _reportCardsRepository = reportCardsRepository;
 
         }
         #region 锁定当前用户
@@ -67,14 +69,16 @@ namespace SchoolCore.Service
             string content = "登陆失败！";
             AjaxResultType resultType = AjaxResultType.Error;
             string[] roleTypes = { "" };
-
-            if (await _userRepository.GetEntities<User>(u => u.UserCode == user.UserCode && u.Password == user.Password).AnyAsync())
+            var currentUserRole = _userRoleRepository.GetEntities<UserRole>(x => x.User.UserCode == user.UserCode && x.User.Password == user.Password);
+            if (currentUserRole!=null)
             {
-                var currentUser = await _userRepository.GetEntities<User>(x => x.UserCode == user.UserCode && x.Password == user.Password).FirstOrDefaultAsync();
-                roleTypes = currentUser.UserRoles.Select(x => x.Role.RoleName).ToArray();
+                var currentUser  = currentUserRole.Select(u => u.User).FirstOrDefault();
+                //var currentUser = await _userRoleRepository.GetEntities<UserRole>(x => x.UserCode == user.UserCode && x.Password == user.Password).FirstOrDefaultAsync();
+                roleTypes = currentUserRole.Select(x => x.Role.RoleName).ToArray();
                 UserInfo.UserCode = user.UserCode;
                 UserInfo.Password = user.Password;
                 resultType = AjaxResultType.Success;
+                content = "登陆成功！";
             }
             else
             {
@@ -92,9 +96,9 @@ namespace SchoolCore.Service
         /// <returns>返回是string，对应error表看</returns>
         public async Task<AjaxResult> StudentRegistration(StudentRegistrationDto student)
         {
-            User user = null;
-            Role role = null;
-            UserRole userRole = null;
+            User user = new();
+            Role role =await _roleRepository.GetEntities<Role>(r => r.Id == 1).FirstOrDefaultAsync();            
+            UserRole userRole = new();
             string errorReasonOrSuccess = "注册失败！";
             AjaxResultType resultType = AjaxResultType.Error;
             List<User> students = new();
@@ -110,24 +114,20 @@ namespace SchoolCore.Service
             else
             {
                 int sexNumber = 0;
-                user = _mapper.Map<User>(student);
+                user = _mapper.Map<User>(student);                
                 user.Password = student.IdCardNumber.Substring(student.IdCardNumber.Length - 6, 6);
                 sexNumber = int.Parse(student.IdCardNumber.Substring(student.IdCardNumber.Length - 1, 1));
                 user.Sex = (sexNumber % 2 == 0) ? "女" : "男";
                 user.Age = int.Parse(DateTime.Now.Year.ToString()) - int.Parse(student.IdCardNumber.Substring(student.IdCardNumber.Length - 11, 4));
-                user.UserClaims.Add(student.UserClaims);
-                role.RoleType = "Student";
-                role.RoleName = "学生";
-                role.RoleClaims.Add(student.RoleClaims);
                 userRole.User = user;
                 userRole.Role = role;
-                user.UserRoles.Add(userRole);
-                await _userRoleRepository.ChangeEntitiesAsync(userRole);
-                await _userRepository.ChangeEntitiesAsync(user);
-                errorReasonOrSuccess = " 注册成功！";
+                //因为中间表有User实体，所以会直接注册一个,相当于直接从中间表把User注册了，
+                //而role因为存在，多以不会注册
+                await _userRoleRepository.AddEntitiesAsync(userRole);  
+                errorReasonOrSuccess = "注册成功！";
                 resultType = AjaxResultType.Success;
             }
-            students = await _userRepository.GetEntities<User>(u => u.UserRoles.Where(ur => ur.Role.RoleType == "Student") != null).Select(u => u).ToListAsync();
+            students = await _userRoleRepository.GetEntities<UserRole>(u => u.RoleId ==1).Select(ur=>ur.User).ToListAsync();
             foreach (var s in students)
             {
                 studentsList.Add(_mapper.Map<StudentRegistrationDto>(s));
@@ -142,9 +142,9 @@ namespace SchoolCore.Service
         /// <returns>和学籍注册大同小异</returns>
         public async Task<AjaxResult> TeachingTeacherRegistration(TeachingTeacherRegistrationDto teachingTeacher)
         {
-            User user = null;
-            Role role = null;
-            UserRole userRole = null;
+            User user = new();
+            Role role = await _roleRepository.GetEntities<Role>(r => r.Id == 2).FirstOrDefaultAsync();
+            UserRole userRole = new();
             string errorReasonOrSuccess = "注册失败！";
             AjaxResultType resultType = AjaxResultType.Error;
             List<User> teachers = new();
@@ -165,22 +165,16 @@ namespace SchoolCore.Service
                 sexNumber = int.Parse(teachingTeacher.IdCardNumber.Substring(teachingTeacher.IdCardNumber.Length - 1, 1));
                 user.Sex = (sexNumber % 2 == 0) ? "女" : "男";
                 user.Age = int.Parse(DateTime.Now.Year.ToString()) - int.Parse(teachingTeacher.IdCardNumber.Substring(teachingTeacher.IdCardNumber.Length - 11, 4));
-                user.UserClaims.Add(teachingTeacher.UserClaims);
-                role.RoleType = "TeachingTeacher";
-                role.RoleName = "教师";
-                role.RoleClaims.Add(teachingTeacher.RoleClaims);
                 userRole.User = user;
                 userRole.Role = role;
-                user.UserRoles.Add(userRole);
-                await _userRoleRepository.ChangeEntitiesAsync(userRole);
-                await _userRepository.ChangeEntitiesAsync(user);
+                await _userRoleRepository.AddEntitiesAsync(userRole);
                 errorReasonOrSuccess = "注册成功！";
                 resultType = AjaxResultType.Success;
             }
-            teachers = await _userRepository.GetEntities<User>(u => u.UserRoles.Where(ur => ur.Role.RoleType == "Student") != null).Select(u => u).ToListAsync();
+            teachers = await _userRoleRepository.GetEntities<UserRole>(u => u.RoleId == 2).Select(ur => ur.User).ToListAsync();
             foreach (var s in teachers)
             {
-                teachersList.Add(_mapper.Map< TeachingTeacherRegistrationDto>(s));
+                teachersList.Add(_mapper.Map<TeachingTeacherRegistrationDto>(s));
             }
             return new AjaxResult(errorReasonOrSuccess, teachersList, resultType);
         }
@@ -192,9 +186,9 @@ namespace SchoolCore.Service
         /// <returns></returns>
         public async Task<AjaxResult> OfficeTeacherRegistration(OfficeTeacherRegistrationDto officeTeacher)
         {
-            User user = null;
-            Role role = null;
-            UserRole userRole = null;
+            User user = new();
+            Role role = await _roleRepository.GetEntities<Role>(r => r.Id == 3).FirstOrDefaultAsync();
+            UserRole userRole = new();
             string errorReasonOrSuccess = "注册失败！";
             AjaxResultType resultType = AjaxResultType.Error;
             List<User> teachers = new();
@@ -215,19 +209,13 @@ namespace SchoolCore.Service
                 sexNumber = int.Parse(officeTeacher.IdCardNumber.Substring(officeTeacher.IdCardNumber.Length - 1, 1));
                 user.Sex = (sexNumber % 2 == 0) ? "女" : "男";
                 user.Age = int.Parse(DateTime.Now.Year.ToString()) - int.Parse(officeTeacher.IdCardNumber.Substring(officeTeacher.IdCardNumber.Length - 11, 4));
-                user.UserClaims.Add(officeTeacher.UserClaims);
-                role.RoleType = "OfficeTeacher";
-                role.RoleName = "办公老师";
-                role.RoleClaims.Add(officeTeacher.RoleClaims);
                 userRole.User = user;
                 userRole.Role = role;
-                user.UserRoles.Add(userRole);
-                await _userRoleRepository.ChangeEntitiesAsync(userRole);
-                await _userRepository.ChangeEntitiesAsync(user);
+                await _userRoleRepository.AddEntitiesAsync(userRole);
                 errorReasonOrSuccess = "注册成功！";
                 resultType = AjaxResultType.Success;
             }
-            teachers = await _userRepository.GetEntities<User>(u => u.UserRoles.Where(ur => ur.Role.RoleType == "Student") != null).Select(u => u).ToListAsync();
+            teachers = await _userRoleRepository.GetEntities<UserRole>(u => u.RoleId == 3).Select(ur => ur.User).ToListAsync();
             foreach (var s in teachers)
             {
                 teachersList.Add(_mapper.Map< OfficeTeacherRegistrationDto>(s));
@@ -242,9 +230,9 @@ namespace SchoolCore.Service
         /// <returns></returns>
         public async Task<AjaxResult> OtherStuffRegistration(OtherStuffRegistrationDto otherStuff)
         {
-            User user = null;
-            Role role = null;
-            UserRole userRole = null;
+            User user = new();
+            Role role = await _roleRepository.GetEntities<Role>(r => r.Id == 4).FirstOrDefaultAsync();
+            UserRole userRole = new();
             string errorReasonOrSuccess = "注册失败！";
             AjaxResultType resultType = AjaxResultType.Error;
             List<User> stuffs = new();
@@ -265,19 +253,13 @@ namespace SchoolCore.Service
                 sexNumber = int.Parse(otherStuff.IdCardNumber.Substring(otherStuff.IdCardNumber.Length - 1, 1));
                 user.Sex = (sexNumber % 2 == 0) ? "女" : "男";
                 user.Age = int.Parse(DateTime.Now.Year.ToString()) - int.Parse(otherStuff.IdCardNumber.Substring(otherStuff.IdCardNumber.Length - 11, 4));
-                user.UserClaims.Add(otherStuff.UserClaims);
-                role.RoleType = "OtherStuff";
-                role.RoleName = "其他职工";
-                role.RoleClaims.Add(otherStuff.RoleClaims);
                 userRole.User = user;
                 userRole.Role = role;
-                user.UserRoles.Add(userRole);
-                await _userRoleRepository.ChangeEntitiesAsync(userRole);
-                await _userRepository.ChangeEntitiesAsync(user);
+                await _userRoleRepository.AddEntitiesAsync(userRole);
                 errorReasonOrSuccess = "注册成功！";
                 resultType = AjaxResultType.Success;
             }
-            stuffs = await _userRepository.GetEntities<User>(u => u.UserRoles.Where(ur => ur.Role.RoleType == "Student") != null).Select(u => u).ToListAsync();
+            stuffs = await _userRoleRepository.GetEntities<UserRole>(u => u.RoleId == 1).Select(ur => ur.User).ToListAsync();
             foreach (var s in stuffs)
             {
                 stuffsList.Add(_mapper.Map< OtherStuffRegistrationDto>(s));

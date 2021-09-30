@@ -9,12 +9,13 @@ using System.Threading.Tasks;
 
 namespace School.Core.Repository
 {
-    public interface IRepository<TEntity, key>
-        where TEntity : class, IEntity<key>
+    public interface IRepository<TEntity>
+        where TEntity : class
     {
         //IQueryable接口的泛型给的就是可协变的
         Task<AjaxResult> ChangeEntitiesAsync(TEntity entity);
-        Task<AjaxResult> DeleteEntities(TEntity entity);
+        Task<AjaxResult> DeleteEntitiesAsync(TEntity entity);
+        Task<AjaxResult> AddEntitiesAsync(TEntity entity);
         IQueryable<TEntity> GetEntities<T>(Expression<Func<TEntity, bool>> expression);
 
     }
