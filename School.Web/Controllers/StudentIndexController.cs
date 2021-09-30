@@ -37,15 +37,14 @@ namespace School.Web.Area.Students.Controllers
         /// <param name="course">Course类的实体</param>
         /// <returns>选课结果弹框+页面</returns>
         [HttpPost]
-        public async Task<IActionResult> ChoosenCourse(string courseCode)
+        public async Task<AjaxResult> ChoosenCourse(string courseCode)
         {
-            string script = null;
-            if (courseCode != null)
+            AjaxResult result = new(); 
+            if(courseCode!=null)
             {
-                var chooseCourseResult = await _schoolContracts.ChooseCourses(courseCode);
-                script = string.Format("<script>alert('{0}');location.href = self.location.href</script>", chooseCourseResult);
-            }
-            return Content(script, "text/html");
+                result = await _schoolContracts.ChooseCourses(courseCode);
+            }         
+            return result;
         }
         /// <summary>
         /// 获取成绩单
@@ -53,10 +52,10 @@ namespace School.Web.Area.Students.Controllers
         /// </summary>
         /// <returns>成绩单页面</returns>
         [HttpGet]
-        public async Task<IActionResult> GetReportCard()
+        public async Task<AjaxResult> GetReportCard()
         {
             var reportsCards = await _schoolContracts.GetReportCard();
-            return View(reportsCards);
+            return reportsCards;
         }
 
 

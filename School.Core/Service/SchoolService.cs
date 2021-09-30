@@ -380,6 +380,7 @@ namespace SchoolCore.Service
                 int pointCount = 0;
                 var student = await _userRepository.GetEntities<User>(u => u.UserCode == UserInfo.UserCode).FirstOrDefaultAsync();
                 var course = await _courseRepository.GetEntities<Course>(c => c.CourseCode == reportCard.Courses.CourseCode).FirstOrDefaultAsync();
+                //所有学生的成绩都存在一张表里，找出来，然后单独放在当前学生的成绩单里
                 studentReportCard.CourseCode.Add(reportCard.Courses.CourseCode);
                 studentReportCard.CourseCredits.Add(reportCard.Courses.CourseCredit);
                 studentReportCard.CourseName.Add(reportCard.Courses.CourseName);
