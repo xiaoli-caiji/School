@@ -1,0 +1,4 @@
+﻿[*.cs]
+
+# CA1000: 不要在泛型类型中声明静态成员
+dotnet_diagnostic.CA1000.severity = none
