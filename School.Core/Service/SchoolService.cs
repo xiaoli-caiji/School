@@ -28,11 +28,13 @@ namespace SchoolCore.Service
         private readonly IRepository<Course> _courseRepository;
         private readonly IRepository<UserCourse> _userCourseRepository;
         private readonly IRepository<ReportCards> _reportCardsRepository;
+        private readonly IRepository<Department> _departmentRepository;
         //private readonly
 
         public SchoolService(IMapper mapper, IRepository<User> userRepository, IRepository<UserRole> userRoleRepositoy,
             IRepository<Academic> academicRepository, IRepository<AClass> aClassRepository, IRepository<Course> courseRepository,
-            IRepository<UserCourse> userCourseRepository, IRepository<ReportCards> reportCardsRepository, IRepository<Role> roleRepository)
+            IRepository<UserCourse> userCourseRepository, IRepository<ReportCards> reportCardsRepository, IRepository<Role> roleRepository,
+            IRepository<Department> departmentRepository)
         {           
             _mapper = mapper;
             _userRepository = userRepository;
@@ -43,6 +45,7 @@ namespace SchoolCore.Service
             _courseRepository = courseRepository;
             _userCourseRepository = userCourseRepository;
             _reportCardsRepository = reportCardsRepository;
+            _departmentRepository = departmentRepository;
 
         }
         #region 锁定当前用户
@@ -115,14 +118,18 @@ namespace SchoolCore.Service
             {
                 int sexNumber = 0;
                 user = _mapper.Map<User>(student);                
-                user.Password = student.IdCardNumber.Substring(student.IdCardNumber.Length - 6, 6);
-                sexNumber = int.Parse(student.IdCardNumber.Substring(student.IdCardNumber.Length - 1, 1));
+                user.Password = student.IdCardNumber.Substring(student.IdCardNumber.Length - 7, 6);
+                sexNumber = int.Parse(student.IdCardNumber.Substring(student.IdCardNumber.Length - 2, 1));
                 user.Sex = (sexNumber % 2 == 0) ? "女" : "男";
-                user.Age = int.Parse(DateTime.Now.Year.ToString()) - int.Parse(student.IdCardNumber.Substring(student.IdCardNumber.Length - 11, 4));
+                user.Age = int.Parse(DateTime.Now.Year.ToString()) - int.Parse(student.IdCardNumber.Substring(student.IdCardNumber.Length - 12, 4));
+                user.UserAcademic = _academicRepository.GetEntities<Academic>(a => a.AcademicName == student.Academic).FirstOrDefault();
+                var aClass = _aClassRepository.GetEntities<AClass>(a => a.AClassName == student.Class).Include(a=>a.AclassUsers).FirstOrDefault();
+                aClass.AclassUsers.Add(user);
+                await _aClassRepository.ChangeEntitiesAsync(aClass);
                 userRole.User = user;
                 userRole.Role = role;
                 //因为中间表有User实体，所以会直接注册一个,相当于直接从中间表把User注册了，
-                //而role因为存在，多以不会注册
+                //而role因为存在，所以不会注册
                 await _userRoleRepository.AddEntitiesAsync(userRole);  
                 errorReasonOrSuccess = "注册成功！";
                 resultType = AjaxResultType.Success;
@@ -130,7 +137,14 @@ namespace SchoolCore.Service
             students = await _userRoleRepository.GetEntities<UserRole>(u => u.RoleId ==1).Select(ur=>ur.User).ToListAsync();
             foreach (var s in students)
             {
-                studentsList.Add(_mapper.Map<StudentRegistrationDto>(s));
+                var studenView = _mapper.Map<StudentRegistrationDto>(s);
+                if(s.UserAcademic!=null)
+                {
+                    var sa = await _academicRepository.GetEntities<Academic>(a => a.Id == s.UserAcademic.Id).FirstOrDefaultAsync();
+                    studenView.Academic = sa.AcademicName;
+                }              
+                studenView.Class = _aClassRepository.GetEntities<AClass>(a => a.AclassUsers.Contains(s)).FirstOrDefault().AClassName;
+                studentsList.Add(studenView);
             }
             return new AjaxResult(errorReasonOrSuccess, studentsList, resultType);
         }
@@ -161,10 +175,14 @@ namespace SchoolCore.Service
             {
                 int sexNumber = 0;
                 user = _mapper.Map<User>(teachingTeacher);
-                user.Password = teachingTeacher.IdCardNumber.Substring(teachingTeacher.IdCardNumber.Length - 6, 6);
-                sexNumber = int.Parse(teachingTeacher.IdCardNumber.Substring(teachingTeacher.IdCardNumber.Length - 1, 1));
+                user.Password = teachingTeacher.IdCardNumber.Substring(teachingTeacher.IdCardNumber.Length - 7, 6);
+                sexNumber = int.Parse(teachingTeacher.IdCardNumber.Substring(teachingTeacher.IdCardNumber.Length - 2, 1));
                 user.Sex = (sexNumber % 2 == 0) ? "女" : "男";
-                user.Age = int.Parse(DateTime.Now.Year.ToString()) - int.Parse(teachingTeacher.IdCardNumber.Substring(teachingTeacher.IdCardNumber.Length - 11, 4));
+                user.Age = int.Parse(DateTime.Now.Year.ToString()) - int.Parse(teachingTeacher.IdCardNumber.Substring(teachingTeacher.IdCardNumber.Length - 12, 4));
+                user.UserAcademic = _academicRepository.GetEntities<Academic>(a => a.AcademicName == teachingTeacher.Academic).FirstOrDefault();
+                var course = _courseRepository.GetEntities<Course>(a => a.CourseName == teachingTeacher.Course).FirstOrDefault();
+                course.TeachingTeacher = user;
+                await _courseRepository.ChangeEntitiesAsync(course);
                 userRole.User = user;
                 userRole.Role = role;
                 await _userRoleRepository.AddEntitiesAsync(userRole);
@@ -174,7 +192,14 @@ namespace SchoolCore.Service
             teachers = await _userRoleRepository.GetEntities<UserRole>(u => u.RoleId == 2).Select(ur => ur.User).ToListAsync();
             foreach (var s in teachers)
             {
-                teachersList.Add(_mapper.Map<TeachingTeacherRegistrationDto>(s));
+                var teacher = _mapper.Map<TeachingTeacherRegistrationDto>(s);
+                if (s.UserAcademic != null)
+                {
+                    var sa = await _academicRepository.GetEntities<Academic>(a => a.Id == s.UserAcademic.Id).FirstOrDefaultAsync();
+                    teacher.Academic = sa.AcademicName;
+                }
+                teacher.Course = _courseRepository.GetEntities<Course>(c => c.TeachingTeacher == s).Select(c=>c.CourseName).ToString();
+                teachersList.Add(teacher);
             }
             return new AjaxResult(errorReasonOrSuccess, teachersList, resultType);
         }
@@ -205,10 +230,14 @@ namespace SchoolCore.Service
             {
                 int sexNumber = 0;
                 user = _mapper.Map<User>(officeTeacher);
-                user.Password = officeTeacher.IdCardNumber.Substring(officeTeacher.IdCardNumber.Length - 6, 6);
-                sexNumber = int.Parse(officeTeacher.IdCardNumber.Substring(officeTeacher.IdCardNumber.Length - 1, 1));
+                user.Password = officeTeacher.IdCardNumber.Substring(officeTeacher.IdCardNumber.Length - 7, 6);
+                sexNumber = int.Parse(officeTeacher.IdCardNumber.Substring(officeTeacher.IdCardNumber.Length - 2, 1));
                 user.Sex = (sexNumber % 2 == 0) ? "女" : "男";
-                user.Age = int.Parse(DateTime.Now.Year.ToString()) - int.Parse(officeTeacher.IdCardNumber.Substring(officeTeacher.IdCardNumber.Length - 11, 4));
+                user.Age = int.Parse(DateTime.Now.Year.ToString()) - int.Parse(officeTeacher.IdCardNumber.Substring(officeTeacher.IdCardNumber.Length - 12, 4));
+                user.UserAcademic = _academicRepository.GetEntities<Academic>(a => a.AcademicName == officeTeacher.Academic).FirstOrDefault();
+                var department = _departmentRepository.GetEntities<Department>(a => a.DepartmentName == officeTeacher.Department).Include(d=>d.DepartmentUsers).FirstOrDefault();
+                department.DepartmentUsers.Add(user);
+                await _departmentRepository.ChangeEntitiesAsync(department);
                 userRole.User = user;
                 userRole.Role = role;
                 await _userRoleRepository.AddEntitiesAsync(userRole);
@@ -218,7 +247,14 @@ namespace SchoolCore.Service
             teachers = await _userRoleRepository.GetEntities<UserRole>(u => u.RoleId == 3).Select(ur => ur.User).ToListAsync();
             foreach (var s in teachers)
             {
-                teachersList.Add(_mapper.Map< OfficeTeacherRegistrationDto>(s));
+                var teacher = _mapper.Map<OfficeTeacherRegistrationDto>(s);
+                if (s.UserAcademic != null)
+                {
+                    var sa = await _academicRepository.GetEntities<Academic>(a => a.Id == s.UserAcademic.Id).FirstOrDefaultAsync();
+                    teacher.Academic = sa.AcademicName;
+                }
+                teacher.Department = _departmentRepository.GetEntities<Department>(d => d.DepartmentUsers.Contains(s)).FirstOrDefault().DepartmentName;
+                teachersList.Add(teacher);
             }
             return new AjaxResult(errorReasonOrSuccess, teachersList, resultType);
         }
@@ -253,6 +289,10 @@ namespace SchoolCore.Service
                 sexNumber = int.Parse(otherStuff.IdCardNumber.Substring(otherStuff.IdCardNumber.Length - 1, 1));
                 user.Sex = (sexNumber % 2 == 0) ? "女" : "男";
                 user.Age = int.Parse(DateTime.Now.Year.ToString()) - int.Parse(otherStuff.IdCardNumber.Substring(otherStuff.IdCardNumber.Length - 11, 4));
+                user.UserAcademic = _academicRepository.GetEntities<Academic>(a => a.AcademicName == otherStuff.Academic).FirstOrDefault();
+                var department = _departmentRepository.GetEntities<Department>(a => a.DepartmentName == otherStuff.Department).Include(d => d.DepartmentUsers).FirstOrDefault();
+                department.DepartmentUsers.Add(user);
+                await _departmentRepository.ChangeEntitiesAsync(department);
                 userRole.User = user;
                 userRole.Role = role;
                 await _userRoleRepository.AddEntitiesAsync(userRole);
@@ -262,6 +302,13 @@ namespace SchoolCore.Service
             stuffs = await _userRoleRepository.GetEntities<UserRole>(u => u.RoleId == 1).Select(ur => ur.User).ToListAsync();
             foreach (var s in stuffs)
             {
+                var stuff = _mapper.Map<OfficeTeacherRegistrationDto>(s);
+                if (s.UserAcademic != null)
+                {
+                    var sa = await _academicRepository.GetEntities<Academic>(a => a.Id == s.UserAcademic.Id).FirstOrDefaultAsync();
+                    stuff.Academic = sa.AcademicName;
+                }
+                stuff.Department = _departmentRepository.GetEntities<Department>(d => d.DepartmentUsers.Contains(s)).FirstOrDefault().DepartmentName;
                 stuffsList.Add(_mapper.Map< OtherStuffRegistrationDto>(s));
             }
             return new AjaxResult(errorReasonOrSuccess, stuffsList, resultType);
@@ -372,24 +419,28 @@ namespace SchoolCore.Service
         /// <returns>成绩单（课程编号、课程名、学分、成绩）</returns>
         public async Task<AjaxResult> GetReportCard()
         {
-            GetReportCardsDto studentReportCard = new();//返回数据结果
+            GetReportCardsDto studentReportCard = new() { 
+            CourseCode = new(),
+            CourseName = new(),
+            CourseCredits = new(),
+            Grades = new()};//返回数据结果
             double GPASum = 0; double CreditsSum = 0;
             var reportCards = await _reportCardsRepository.GetEntities<ReportCards>(r => r.Student.UserCode == UserInfo.UserCode).ToListAsync();
             foreach (var reportCard in reportCards)
             {
                 int pointCount = 0;
                 var student = await _userRepository.GetEntities<User>(u => u.UserCode == UserInfo.UserCode).FirstOrDefaultAsync();
-                var course = await _courseRepository.GetEntities<Course>(c => c.CourseCode == reportCard.Courses.CourseCode).FirstOrDefaultAsync();
+                var course = await _courseRepository.GetEntities<Course>(c => c.Id== reportCard.CourseId).FirstOrDefaultAsync();
                 //所有学生的成绩都存在一张表里，找出来，然后单独放在当前学生的成绩单里
-                studentReportCard.CourseCode.Add(reportCard.Courses.CourseCode);
-                studentReportCard.CourseCredits.Add(reportCard.Courses.CourseCredit);
-                studentReportCard.CourseName.Add(reportCard.Courses.CourseName);
+                studentReportCard.CourseCode.Add(course.CourseCode);
+                studentReportCard.CourseCredits.Add(course.CourseCredit);
+                studentReportCard.CourseName.Add(course.CourseName);
                 studentReportCard.Grades.Add(reportCard.Report);
                 if (reportCard.Report >= 60)
                 {
                     studentReportCard.GotGrades += course.CourseCredit;
                 }
-                pointCount = (reportCard.Report / 10 - 5) switch
+                pointCount = (((int)(reportCard.Report / 10)) - 5) switch
                 {
                     1 => 1,
                     2 => 2,

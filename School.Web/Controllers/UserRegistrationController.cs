@@ -25,29 +25,26 @@ namespace School.Web.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> TeachingTeacherRegistration(TeachingTeacherRegistrationDto teachingTeacher)
+        public async Task<AjaxResult> TeachingTeacherRegistration(TeachingTeacherRegistrationDto teachingTeacher)
         {
             var registrationResult = await _schoolContracts.TeachingTeacherRegistration(teachingTeacher);
-            string script = string.Format("<script>aleart('{0}');location.href = self.location.href", registrationResult);
-            return Content(script, "text/html");
+            return registrationResult;
 
         }
 
         [HttpPost]
-        public async Task<IActionResult> OfficeTeacherRegistration(OfficeTeacherRegistrationDto officeTeacher)
+        public async Task<AjaxResult> OfficeTeacherRegistration(OfficeTeacherRegistrationDto officeTeacher)
         {
             var registrationResult = await _schoolContracts.OfficeTeacherRegistration(officeTeacher);
-            string script = string.Format("<script>aleart('{0}');location.href = self.location.href", registrationResult);
-            return Content(script, "text/html");
+            return registrationResult;
 
         }
 
         [HttpPost]
-        public async Task<IActionResult> OtherStuffRegistration(OtherStuffRegistrationDto otherStuff)
+        public async Task<AjaxResult> OtherStuffRegistration(OtherStuffRegistrationDto otherStuff)
         {
             var registrationResult = await _schoolContracts.OtherStuffRegistration(otherStuff);
-            string script = string.Format("<script>aleart('{0}');location.href = self.location.href", registrationResult);
-            return Content(script, "text/html");
+            return registrationResult;
         }
 
     }

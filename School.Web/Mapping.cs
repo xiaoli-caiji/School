@@ -11,8 +11,8 @@ namespace School.Web.MappingMapper
     {
         public MapperProfile()
         {
-            CreateMap<StudentRegistrationDto, User>();
-            CreateMap<User, StudentRegistrationDto>();
+            CreateMap<TeachingTeacherRegistrationDto, User>();
+            CreateMap<User, TeachingTeacherRegistrationDto>();
         }
         public int Id { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
     }
