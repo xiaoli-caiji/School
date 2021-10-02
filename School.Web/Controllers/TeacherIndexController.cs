@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using School.Core.UserIndex.Dtos;
+using School.Data;
 using SchoolCore.Service;
 using System;
 using System.Collections.Generic;
@@ -22,11 +23,10 @@ namespace School.Web.Area.User.TeachingTeacher.Controllers
         /// </summary>
         /// <returns>该课的学生列表(姓名、学号等、成绩)</returns>
         [HttpPost]
-        public async Task<IActionResult> InputReportCard(List<InputReportCardsDto> reportCards)
+        public async Task<List<AjaxResult>> InputReportCard([FromBody]List<InputReportCardsDto> reportCards)
         {
             var result = await _schoolContracts.InputReportCard(reportCards);
-            var script = string.Format("<script>alert('{0}')</script>;location.href = self.location.href", result);
-            return Content(script, "text/html");
+            return result;
         }
     }
 }

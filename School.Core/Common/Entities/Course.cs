@@ -6,6 +6,9 @@ namespace SchoolCore.Entities
 {
     public class Course : EntityBase<int>
     {
+        //一门课程可在多个学院开设，所以这里是课程编号不唯一，Id和课程名称唯一；
+        //课程名格式： 课程名称+学院简称+班号，eg：大学物理信通1班
+        //感觉思想不合理，问同事
         public virtual User TeachingTeacher { get; set; }
         public string CourseName { get; set; }
         public string CourseCode { get; set; }

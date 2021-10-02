@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Mvc;
 using School.Core.UserIndex.Dtos;
 using School.Data;
 using SchoolCore.Dtos;
@@ -20,6 +21,6 @@ namespace SchoolCore.Service
         Task<AjaxResult> GetCourses(CourseOutputDto course);
         Task<AjaxResult> ChooseCourses(string courseCode);
         Task<AjaxResult> GetReportCard();
-        Task<List<AjaxResult>> InputReportCard(List<InputReportCardsDto> reportCards);
+        Task<List<AjaxResult>> InputReportCard([FromBody]List<InputReportCardsDto> reportCards);
     }
 }

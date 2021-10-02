@@ -13,7 +13,7 @@ namespace SchoolEntityConfiguration
         {
             
             builder.HasOne(u => u.Student);
-            builder.HasOne(u => u.Courses);
+            builder.HasOne(u => u.Course);
             EntityConfigurationAppend(builder);
         }      
         partial void EntityConfigurationAppend(EntityTypeBuilder<ReportCards> builder);

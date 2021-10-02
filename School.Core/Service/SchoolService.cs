@@ -18,7 +18,6 @@ namespace SchoolCore.Service
 {
     public class SchoolService : ISchoolContracts
     {
-        //private readonly BaseDbContext _repository;
         private readonly IMapper _mapper;
         private readonly IRepository<User> _userRepository;
         private readonly IRepository<Role> _roleRepository;
@@ -29,12 +28,12 @@ namespace SchoolCore.Service
         private readonly IRepository<UserCourse> _userCourseRepository;
         private readonly IRepository<ReportCards> _reportCardsRepository;
         private readonly IRepository<Department> _departmentRepository;
-        //private readonly
+        private readonly IRepository<AcademicCourse> _academicCourseRepository;
 
         public SchoolService(IMapper mapper, IRepository<User> userRepository, IRepository<UserRole> userRoleRepositoy,
             IRepository<Academic> academicRepository, IRepository<AClass> aClassRepository, IRepository<Course> courseRepository,
             IRepository<UserCourse> userCourseRepository, IRepository<ReportCards> reportCardsRepository, IRepository<Role> roleRepository,
-            IRepository<Department> departmentRepository)
+            IRepository<Department> departmentRepository, IRepository<AcademicCourse> academicCourseRepository)
         {           
             _mapper = mapper;
             _userRepository = userRepository;
@@ -46,7 +45,7 @@ namespace SchoolCore.Service
             _userCourseRepository = userCourseRepository;
             _reportCardsRepository = reportCardsRepository;
             _departmentRepository = departmentRepository;
-
+            _academicCourseRepository = academicCourseRepository;
         }
         #region 锁定当前用户
         /// <summary>
@@ -324,8 +323,23 @@ namespace SchoolCore.Service
         /// <returns>返回修改结果字符串</returns>
         public async Task<AjaxResult> Settings(UserSelfSettingDto dto)
         {
-            dto.UserCode = UserInfo.UserCode;
-            var user = _mapper.Map<User>(dto);
+            //dto.UserCode = UserInfo.UserCode;
+            var user = _userRepository.GetEntities<User>(u => u.UserCode == UserInfo.UserCode).FirstOrDefault();
+            if(dto.Password!=null)
+            {
+                user.Password = dto.Password;
+            }
+            if (dto.PhoneNumber != null)
+            {
+                user.PhoneNumber = dto.PhoneNumber;
+            }           
+            if(dto.UserClaims!=null)
+            {
+                foreach (var uc in dto.UserClaims)
+                {
+                    user.UserClaims.Add(uc);
+                }
+            }                    
             var result = await _userRepository.ChangeEntitiesAsync(user);            
             return result;
         }
@@ -341,15 +355,21 @@ namespace SchoolCore.Service
         {
             List<Course> browseCourse = new();//查询结果
             List<CourseOutputDto> coursesList = new();//返回数据结果
-            CourseOutputDto course1 = new();
+            CourseOutputDto course1 = new()
+            {
+                Academics = new List<string>()
+            };
             AcademicCourse academicCourse = new();
             //按照从左到右的顺序分别写三个if语句，就可以避免写6种情况了
-            if (!string.IsNullOrEmpty(course.Academics.ToString()))
+            if (!string.IsNullOrEmpty(course.AcademicName))
             {
-                academicCourse.Academic = await _academicRepository.GetEntities<Academic>(a => a.AcademicName == course.AcademicName).FirstOrDefaultAsync();
-                browseCourse.AddRange(await _courseRepository.GetEntities<Course>(c => c.CourseAcademic.Contains(academicCourse)).ToListAsync());
+                //academicCourse.Academic = await _academicRepository.GetEntities<Academic>(a => a.AcademicName == course.AcademicName).FirstOrDefaultAsync();
+                var academicID = _academicRepository.GetEntities<Academic>(a => a.AcademicName == course.AcademicName).FirstOrDefault().Id;
+                var courseIds = _academicCourseRepository.GetEntities<AcademicCourse>(ac => ac.AcademicId == academicID).Select(c => c.CourseId).ToList();
+                browseCourse.AddRange(_courseRepository.GetEntities<Course>(c => courseIds.Contains(c.Id)).Include(c=>c.TeachingTeacher));
+                //browseCourse.AddRange(await _courseRepository.GetEntities<Course>(c => c.CourseAcademic.Where(ca=>ca.Academic.AcademicName==course.AcademicName)).ToListAsync());
             }
-            if (!string.IsNullOrEmpty(course.TeachingTeacher.ToString()))
+            if (!string.IsNullOrEmpty(course.TeachingTeacher))
             {
                 browseCourse.AddRange(await _courseRepository.GetEntities<Course>(c => c.TeachingTeacher.Name == course.TeachingTeacher).ToListAsync());
             }
@@ -361,7 +381,9 @@ namespace SchoolCore.Service
             foreach (var aCourse in browseCourse)
             {
                 course1 = _mapper.Map<CourseOutputDto>(aCourse);
-                course1.Academics.Add(aCourse.CourseAcademic.FirstOrDefault(ca => ca.CourseId == aCourse.Id).Academic.AcademicName);
+                var academicIds = _academicCourseRepository.GetEntities<AcademicCourse>(ac => ac.CourseId == aCourse.Id).Select(ac => ac.AcademicId).ToList();
+                course1.Academics = _academicRepository.GetEntities<Academic>(a => academicIds.Contains(a.Id)).Where(a => a.AcademicName != null).Select(a => a.AcademicName).ToList();
+                
                 course1.TeachingTeacher = aCourse.TeachingTeacher.Name;
                 coursesList.Add(course1);
             }
@@ -372,15 +394,15 @@ namespace SchoolCore.Service
         /// 选课系统
         /// 注意检查选课人数是否增加
         /// </summary>
-        /// <param name="courseCode"></param>
+        /// <param name="courseName"></param>
         /// <returns>返回的是选课结果字符串</returns>
-        public async Task<AjaxResult> ChooseCourses(string courseCode)
+        public async Task<AjaxResult> ChooseCourses(string courseName)
         {
             //选课成功，选课人数+1
             AjaxResult result = new();
-            if (await _courseRepository.GetEntities<Course>(c => c.CourseCode == courseCode).AnyAsync())
+            if (await _courseRepository.GetEntities<Course>(c => c.CourseName == courseName).AnyAsync())
             {
-                var course = await _courseRepository.GetEntities<Course>(c => c.CourseCode == courseCode).FirstOrDefaultAsync();
+                var course = await _courseRepository.GetEntities<Course>(c => c.CourseName == courseName).FirstOrDefaultAsync();
                 var user = await _userRepository.GetEntities<Course>(u => u.UserCode == UserInfo.UserCode).FirstOrDefaultAsync();
                 UserCourse userCourse = new();
                 course.CourseChoosenNumber += 1;
@@ -403,8 +425,14 @@ namespace SchoolCore.Service
             List<AjaxResult> result = new();
             foreach (var reportCard in reportCards)
             {
-                var report = _mapper.Map<ReportCards>(reportCard);
-                result.Add(await _reportCardsRepository.ChangeEntitiesAsync(report));                              
+                var userID = _userRepository.GetEntities<User>(u => u.Name == reportCard.StudentName).FirstOrDefault().Id;
+                var coursrID = _courseRepository.GetEntities<Course>(c => c.CourseName == reportCard.CourseName).FirstOrDefault().Id;
+                var findReportcard = _reportCardsRepository.GetEntities<ReportCards>(rc => rc.CourseId == coursrID && rc.UserId == userID).FirstOrDefault();
+                if (findReportcard!=null)
+                {
+                    findReportcard.Report = reportCard.Grades;  
+                }
+                result.Add(await _reportCardsRepository.ChangeEntitiesAsync(findReportcard));                              
             }
             return result;
         }

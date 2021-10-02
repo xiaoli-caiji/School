@@ -1,5 +1,7 @@
 using AutoMapper;
 using EntityConfigurationBase;
+using School.Core.Common.Entities;
+using School.Core.UserIndex.Dtos;
 using SchoolCore.Dtos;
 using SchoolCore.Entities;
 using SchoolCore.UserIndex.Dtos;
@@ -11,8 +13,8 @@ namespace School.Web.MappingMapper
     {
         public MapperProfile()
         {
-            CreateMap<TeachingTeacherRegistrationDto, User>();
-            CreateMap<User, TeachingTeacherRegistrationDto>();
+            CreateMap<Course, CourseOutputDto>();
+            CreateMap<UserSelfSettingDto, User>();
         }
         public int Id { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
     }

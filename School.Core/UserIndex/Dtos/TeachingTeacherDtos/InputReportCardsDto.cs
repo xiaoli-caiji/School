@@ -7,8 +7,7 @@ namespace School.Core.UserIndex.Dtos
     {
         [DisplayName("课程名")]
         public string CourseName { get; set; }
-        [DisplayName("课程编号")]
-        public string CourseCode { get; set; }
+
         [DisplayName("学生学号")]
         public string StudentCode { get; set; }
         [DisplayName("学生姓名")]
