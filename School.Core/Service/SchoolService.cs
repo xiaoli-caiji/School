@@ -58,7 +58,7 @@ namespace SchoolCore.Service
         }
         #endregion
 
-        #region 用户登录
+        #region 用户登录/登出
         /// <summary>
         /// 用户登录界面只有账号密码
         /// 后面加验证码
@@ -70,13 +70,16 @@ namespace SchoolCore.Service
             
             string content = "登陆失败！";
             AjaxResultType resultType = AjaxResultType.Error;
-            string[] roleTypes = { "" };
+            //string[] roleTypes = { "" };
+            UserTokenDto userTokenDto = new();
             var currentUserRole = _userRoleRepository.GetEntities<UserRole>(x => x.User.UserCode == user.UserCode && x.User.Password == user.Password);
-            if (currentUserRole!=null)
-            {
-                var currentUser  = currentUserRole.Select(u => u.User).FirstOrDefault();
+            var currentUser = currentUserRole.Select(u => u.User).FirstOrDefault();
+            if (currentUser != null)
+            {         
                 //var currentUser = await _userRoleRepository.GetEntities<UserRole>(x => x.UserCode == user.UserCode && x.Password == user.Password).FirstOrDefaultAsync();
-                roleTypes = currentUserRole.Select(x => x.Role.RoleName).ToArray();
+                userTokenDto.Role = currentUserRole.Select(x => x.Role.RoleName).ToArray();
+                userTokenDto.Name = currentUser.Name;
+                userTokenDto.Code = user.UserCode;
                 UserInfo.UserCode = user.UserCode;
                 UserInfo.Password = user.Password;
                 resultType = AjaxResultType.Success;
@@ -86,8 +89,20 @@ namespace SchoolCore.Service
             {
                 content += "账号或密码错误，请检查并重新输入！";
             }
-            return new AjaxResult(content, roleTypes, resultType);
+            return new AjaxResult(content, userTokenDto, resultType);
         }
+
+        ///<summary>
+        ///用户登出，直接让静态为0？
+        ///</summary>
+
+        public async Task<AjaxResult> UserLogout()
+        {
+            UserInfo.UserCode = null;
+            UserInfo.Password = null;
+            return new AjaxResult("您已登出！", AjaxResultType.Success);
+        }
+
         #endregion
 
         #region 用户注册系统

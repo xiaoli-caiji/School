@@ -13,6 +13,7 @@ namespace SchoolCore.Service
     public interface ISchoolContracts
     {
         Task<AjaxResult> UserLogin(UserInputDto dto);
+        Task<AjaxResult> UserLogout();
         Task<AjaxResult> StudentRegistration(StudentRegistrationDto student);
         Task<AjaxResult> TeachingTeacherRegistration(TeachingTeacherRegistrationDto teachingTeacher);
         Task<AjaxResult> OfficeTeacherRegistration(OfficeTeacherRegistrationDto officeTeacher);

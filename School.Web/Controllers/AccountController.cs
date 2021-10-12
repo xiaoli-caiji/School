@@ -16,7 +16,7 @@ namespace School.Web.Controllers
             _schoolContracts = schoolContracts;
         }
         [HttpPost]
-        public async Task<AjaxResult> Login(UserInputDto user)
+        public async Task<AjaxResult> Login([FromBody]UserInputDto user)
         {
             AjaxResult userRoles = new();
             if (user.UserCode != null && user.Password != null)
@@ -43,6 +43,13 @@ namespace School.Web.Controllers
             }
 
             return userRoles;
+        }
+
+        [HttpPost]
+        public async Task<AjaxResult> Logout()
+        {
+            var result = await _schoolContracts.UserLogout();
+            return result;
         }
 
     }
