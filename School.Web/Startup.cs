@@ -44,7 +44,7 @@ namespace School.Web
                      builder.AllowCredentials()
                             .AllowAnyHeader()
                             .AllowAnyMethod()
-                            .AllowAnyOrigin();
+                            .SetIsOriginAllowed(_ => true);
                  });
             });
 
