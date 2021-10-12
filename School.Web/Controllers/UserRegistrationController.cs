@@ -16,7 +16,7 @@ namespace School.Web.Controllers
             _schoolContracts = schoolContracts;
         }
         [HttpPost]
-        public async Task<AjaxResult> StudentRegistration(StudentRegistrationDto student)
+        public async Task<AjaxResult> StudentRegistration([FromBody]StudentRegistrationDto student)
         {//弹窗的内容：Content，数据：data
             var registrationResult = await _schoolContracts.StudentRegistration(student);
 
@@ -25,7 +25,7 @@ namespace School.Web.Controllers
         }
 
         [HttpPost]
-        public async Task<AjaxResult> TeachingTeacherRegistration(TeachingTeacherRegistrationDto teachingTeacher)
+        public async Task<AjaxResult> TeachingTeacherRegistration([FromBody]TeachingTeacherRegistrationDto teachingTeacher)
         {
             var registrationResult = await _schoolContracts.TeachingTeacherRegistration(teachingTeacher);
             return registrationResult;
@@ -33,7 +33,7 @@ namespace School.Web.Controllers
         }
 
         [HttpPost]
-        public async Task<AjaxResult> OfficeTeacherRegistration(OfficeTeacherRegistrationDto officeTeacher)
+        public async Task<AjaxResult> OfficeTeacherRegistration([FromBody]OfficeTeacherRegistrationDto officeTeacher)
         {
             var registrationResult = await _schoolContracts.OfficeTeacherRegistration(officeTeacher);
             return registrationResult;
@@ -41,7 +41,7 @@ namespace School.Web.Controllers
         }
 
         [HttpPost]
-        public async Task<AjaxResult> OtherStuffRegistration(OtherStuffRegistrationDto otherStuff)
+        public async Task<AjaxResult> OtherStuffRegistration([FromBody]OtherStuffRegistrationDto otherStuff)
         {
             var registrationResult = await _schoolContracts.OtherStuffRegistration(otherStuff);
             return registrationResult;

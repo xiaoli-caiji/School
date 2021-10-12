@@ -25,7 +25,7 @@ namespace School.Web.Area.Students.Controllers
         ///注意传进来的是实体，返回的是列表
         ///</summary>
         [HttpGet]
-        public async Task<AjaxResult> BrowseCourse(/*[FromBody]*/CourseOutputDto course)
+        public async Task<AjaxResult> BrowseCourse([FromBody] CourseOutputDto course)
         {
             var courses = await _schoolContracts.GetCourses(course);
             return courses;

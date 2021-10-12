@@ -18,6 +18,7 @@ namespace School.Web
 {
     public class Startup
     {
+        readonly string MyAllowSpecificOrigins = "_myAllowSpecificOrigins";
         public Startup(IConfiguration configuration)
         {
             Configuration = configuration;
@@ -36,13 +37,16 @@ namespace School.Web
             services.AddAutoMapper(typeof(MapperProfile));
             services.TryAddScoped(typeof(IRepository<>), typeof(Repository<>));
             services.TryAddScoped<ISchoolContracts, SchoolService>();
-            //services.TryAddScoped<IRepository<User>, Repository<User>>();
-            //services.TryAddScoped<IRepository<UserRole>, Repository<UserRole>>();
-            //services.TryAddScoped<IRepository<Course>, Repository<Course>>();
-            //services.TryAddScoped<IRepository<Academic>, Repository<Academic>>();
-            //services.TryAddScoped<IRepository<UserCourse>, Repository<UserCourse>>();
-            //services.TryAddScoped<IRepository<ReportCards>, Repository<ReportCards>>();
-
+            services.AddCors(options =>
+            {
+                options.AddPolicy(MyAllowSpecificOrigins, builder =>
+                 {
+                     builder.AllowCredentials()
+                            .AllowAnyHeader()
+                            .AllowAnyMethod()
+                            .AllowAnyOrigin();
+                 });
+            });
 
             //注册Swagger生成器，定义一个和多个Swagger 文档
             services.AddSwaggerGen(c =>
@@ -71,6 +75,7 @@ namespace School.Web
             app.UseRouting();
 
             app.UseAuthorization();
+            app.UseCors(MyAllowSpecificOrigins);
 
             app.UseEndpoints(endpoints =>
             {

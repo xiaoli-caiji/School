@@ -2,9 +2,6 @@ using Microsoft.AspNetCore.Mvc;
 using School.Data;
 using SchoolCore.Service;
 using SchoolCore.UserIndex.Dtos;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 
 namespace School.Web.Controllers
@@ -23,7 +20,7 @@ namespace School.Web.Controllers
         /// </summary>
         /// <returns></returns>
         [HttpGet]
-        public async Task<AjaxResult> Settings(UserSelfSettingDto dto)
+        public async Task<AjaxResult> Settings([FromBody]UserSelfSettingDto dto)
         {
             var result = await _schoolContracts.Settings(dto);
             return result;
