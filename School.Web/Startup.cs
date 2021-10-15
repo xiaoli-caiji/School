@@ -7,11 +7,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.OpenApi.Models;
-using School.Core.Common.Entities;
 using School.Core.Repository;
 using School.Web.MappingMapper;
 using SchoolCore;
-using SchoolCore.Entities;
 using SchoolCore.Service;
 
 namespace School.Web
@@ -41,10 +39,10 @@ namespace School.Web
             {
                 options.AddPolicy(MyAllowSpecificOrigins, builder =>
                  {
-                     builder.AllowCredentials()
-                            .AllowAnyHeader()
-                            .AllowAnyMethod()
-                            .SetIsOriginAllowed(_ => true);
+                     builder.AllowAnyHeader()
+                            .AllowAnyMethod()                           
+                            .SetIsOriginAllowed(_ => true)
+                            .AllowCredentials();
                  });
             });
 

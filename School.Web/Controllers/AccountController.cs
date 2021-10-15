@@ -8,10 +8,10 @@ using School.Data;
 namespace School.Web.Controllers
 {
     [Route("/api/[controller]/[action]")]
-    public class LoginController : Controller
+    public class AccountController : Controller
     {
         private readonly ISchoolContracts _schoolContracts;
-        public LoginController(ISchoolContracts schoolContracts)
+        public AccountController(ISchoolContracts schoolContracts)
         {
             _schoolContracts = schoolContracts;
         }

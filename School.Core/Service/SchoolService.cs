@@ -366,7 +366,7 @@ namespace SchoolCore.Service
         /// </summary>
         /// <param name="course"></param>
         /// <returns>返回列表</returns>
-        public async Task<AjaxResult> GetCourses(CourseOutputDto course)
+        public async Task<AjaxResult> GetCourses(CourseInputDto course)
         {
             List<Course> browseCourse = new();//查询结果
             List<CourseOutputDto> coursesList = new();//返回数据结果
@@ -375,6 +375,7 @@ namespace SchoolCore.Service
                 Academics = new List<string>()
             };
             AcademicCourse academicCourse = new();
+            List<string> content = new();
             //按照从左到右的顺序分别写三个if语句，就可以避免写6种情况了
             if (!string.IsNullOrEmpty(course.AcademicName))
             {
@@ -386,20 +387,28 @@ namespace SchoolCore.Service
             }
             if (!string.IsNullOrEmpty(course.TeachingTeacher))
             {
-                browseCourse.AddRange(await _courseRepository.GetEntities<Course>(c => c.TeachingTeacher.Name == course.TeachingTeacher).ToListAsync());
+                browseCourse.AddRange(await _courseRepository.GetEntities<Course>(c => c.TeachingTeacher.Name == course.TeachingTeacher).Include(c=>c.TeachingTeacher).ToListAsync());
             }
             if (!string.IsNullOrEmpty(course.CourseName))
             {
-                browseCourse.AddRange(await _courseRepository.GetEntities<Course>(c => c.CourseName == course.CourseName).ToListAsync());
+                browseCourse.AddRange(await _courseRepository.GetEntities<Course>(c => c.CourseName == course.CourseName).Include(c => c.TeachingTeacher).ToListAsync());
             }
             //还是要从数据库查询，规避掉传入参数为空的情况，不许偷懒！aCourse是Course对象
             foreach (var aCourse in browseCourse)
             {
                 course1 = _mapper.Map<CourseOutputDto>(aCourse);
                 var academicIds = _academicCourseRepository.GetEntities<AcademicCourse>(ac => ac.CourseId == aCourse.Id).Select(ac => ac.AcademicId).ToList();
-                course1.Academics = _academicRepository.GetEntities<Academic>(a => academicIds.Contains(a.Id)).Where(a => a.AcademicName != null).Select(a => a.AcademicName).ToList();
-                
-                course1.TeachingTeacher = aCourse.TeachingTeacher.Name;
+                var user = _userRepository.GetEntities<User>(u => u.UserCode == course.UserCode).FirstOrDefault();
+                course1.Academics = _academicRepository.GetEntities<Academic>(a => academicIds.Contains(a.Id)).Where(a => a.AcademicName != null).Select(a => a.AcademicName).ToList();                
+                course1.TeachingTeacher = aCourse.TeachingTeacher.Name;                
+                if(_userCourseRepository.GetEntities<UserCourse>(uc=>uc.UserId == user.Id && uc.CourseId == aCourse.Id).Any())
+                {
+                    course1.ChoosenOrNot = "已选";
+                }
+                else
+                {
+                    course1.ChoosenOrNot = "未选";
+                }
                 coursesList.Add(course1);
             }
             return new AjaxResult("查询成功！", coursesList, AjaxResultType.Success);
@@ -411,25 +420,74 @@ namespace SchoolCore.Service
         /// </summary>
         /// <param name="courseName"></param>
         /// <returns>返回的是选课结果字符串</returns>
-        public async Task<AjaxResult> ChooseCourses(string courseName)
+        public async Task<AjaxResult> ChooseCourses(CourseChooseDto dto)
         {
             //选课成功，选课人数+1
             AjaxResult result = new();
-            if (await _courseRepository.GetEntities<Course>(c => c.CourseName == courseName).AnyAsync())
+            if (await _courseRepository.GetEntities<Course>(c => c.CourseCode == dto.CourseCode).AnyAsync())
             {
-                var course = await _courseRepository.GetEntities<Course>(c => c.CourseName == courseName).FirstOrDefaultAsync();
-                var user = await _userRepository.GetEntities<Course>(u => u.UserCode == UserInfo.UserCode).FirstOrDefaultAsync();
+                var course = await _courseRepository.GetEntities<Course>(c => c.CourseCode == dto.CourseCode).FirstOrDefaultAsync();
+                var user = await _userRepository.GetEntities<Course>(u => u.UserCode == dto.UserCode).FirstOrDefaultAsync();
                 UserCourse userCourse = new();
                 course.CourseChoosenNumber += 1;
                 userCourse.User = user;
                 userCourse.Course = course;
-                result = await _userCourseRepository.ChangeEntitiesAsync(userCourse);               
+                if(!await _userCourseRepository.GetEntities<UserCourse>(uc=>uc.UserId == user.Id && uc.CourseId == course.Id).AnyAsync())
+                {
+                    result = await _userCourseRepository.ChangeEntitiesAsync(userCourse);
+                }
+                else
+                {
+                    result.Content = "已选！";
+                }
             }
             return result;
+        }
+
+        ///<summary>
+        ///查看已选课程
+        ///</summary>
+        
+        public async Task<AjaxResult> HasChoosen(UserInputDto user)
+        {
+            var myChoosenCourse = await _userCourseRepository.GetEntities<UserCourse>(uc => uc.User.UserCode == user.UserCode).ToListAsync();
+            return new AjaxResult("查询成功！", AjaxResultType.Success, myChoosenCourse);
         }
         #endregion
 
         #region 成绩录入系统
+
+        ///<summary>
+        ///把该老师所带的不同的课以及每个课内的学生给到前端
+        ///</summary>
+        public async Task<AjaxResult> CourseAndStudent(string teacherCode)
+        {
+            AjaxResult result = new("查询成功！");
+            CourseAndStudentListDto dto = new()
+            {
+                CourseAndStudents = new(),
+                Courses = new()
+            };
+            List<CourseAndStudenDto> courseAndStudent = new();           
+            var courseList = await _courseRepository.GetEntities<Course>(c => c.TeachingTeacher.UserCode == teacherCode).ToListAsync();
+            if (courseList.Count != 0)
+            {
+                foreach (var c in courseList)
+                {
+                    CourseAndStudenDto dto1 = new()
+                    {
+                        Students = new()
+                    };
+                    dto1.CourseName = c.CourseName;
+                    dto1.Students = await _userCourseRepository.GetEntities<UserCourse>(uc => uc.CourseId == c.Id).Include(c => c.User).Select(uc => uc.User).ToListAsync();
+                    dto.CourseAndStudents.Add(dto1);
+                    dto.Courses.Add(dto1.CourseName);
+                }
+            }
+            result.Data = dto;
+            return result;
+        }
+        
         /// <summary>
         /// 成绩录入或修改？
         /// 根据传入的学号直接在用户=》学生=》学生备注=》成绩单添加该课成绩
@@ -460,25 +518,26 @@ namespace SchoolCore.Service
         /// 课程名称、成绩
         /// </summary>
         /// <returns>成绩单（课程编号、课程名、学分、成绩）</returns>
-        public async Task<AjaxResult> GetReportCard()
+        public async Task<AjaxResult> GetReportCard(string userCode)
         {
             GetReportCardsDto studentReportCard = new() { 
-            CourseCode = new(),
-            CourseName = new(),
-            CourseCredits = new(),
-            Grades = new()};//返回数据结果
+            Course = new(),
+            GotGrades = 0};//返回数据结果
+            
             double GPASum = 0; double CreditsSum = 0;
-            var reportCards = await _reportCardsRepository.GetEntities<ReportCards>(r => r.Student.UserCode == UserInfo.UserCode).ToListAsync();
+            var reportCards = await _reportCardsRepository.GetEntities<ReportCards>(r => r.Student.UserCode == userCode).ToListAsync();
             foreach (var reportCard in reportCards)
             {
                 int pointCount = 0;
-                var student = await _userRepository.GetEntities<User>(u => u.UserCode == UserInfo.UserCode).FirstOrDefaultAsync();
+                var student = await _userRepository.GetEntities<User>(u => u.UserCode == userCode).FirstOrDefaultAsync();
                 var course = await _courseRepository.GetEntities<Course>(c => c.Id== reportCard.CourseId).FirstOrDefaultAsync();
-                //所有学生的成绩都存在一张表里，找出来，然后单独放在当前学生的成绩单里
-                studentReportCard.CourseCode.Add(course.CourseCode);
-                studentReportCard.CourseCredits.Add(course.CourseCredit);
-                studentReportCard.CourseName.Add(course.CourseName);
-                studentReportCard.Grades.Add(reportCard.Report);
+                CourseReportDto courseReport = new();
+                //所有学生的成绩都存在一张表里，找出来，
+                courseReport.CourseCode = course.CourseCode;
+                courseReport.CourseName = course.CourseName;
+                courseReport.CourseCredits = course.CourseCredit;
+                courseReport.Grades = reportCard.Report;
+                studentReportCard.Course.Add(courseReport);
                 if (reportCard.Report >= 60)
                 {
                     studentReportCard.GotGrades += course.CourseCredit;
@@ -496,7 +555,7 @@ namespace SchoolCore.Service
                 CreditsSum += course.CourseCredit;
                 studentReportCard.GPA = GPASum / CreditsSum;
             }
-            return new AjaxResult("", studentReportCard);
+            return new AjaxResult("查询成功！", studentReportCard);
         }
         #endregion
 

@@ -35,6 +35,7 @@ namespace SchoolCore.Dtos
 
         [DisplayName("上课时间")]
         public string CourseTime { get; set; }
+        public string ChoosenOrNot { get; set; }
 
     }
 }

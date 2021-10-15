@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using School.Core.UserIndex.Dtos;
+using School.Core.UserIndex.Dtos.StudentsDtos;
 using School.Data;
 using SchoolCore.Dtos;
 using SchoolCore.Entities;
@@ -19,9 +20,11 @@ namespace SchoolCore.Service
         Task<AjaxResult> OfficeTeacherRegistration(OfficeTeacherRegistrationDto officeTeacher);
         Task<AjaxResult> OtherStuffRegistration(OtherStuffRegistrationDto otherStuff);
         Task<AjaxResult> Settings(UserSelfSettingDto dto);
-        Task<AjaxResult> GetCourses(CourseOutputDto course);
-        Task<AjaxResult> ChooseCourses(string courseCode);
-        Task<AjaxResult> GetReportCard();
+        Task<AjaxResult> GetCourses(CourseInputDto course);
+        Task<AjaxResult> ChooseCourses(CourseChooseDto dto);
+        Task<AjaxResult> GetReportCard(string userCode);
+        Task<AjaxResult> HasChoosen(UserInputDto user);
+        Task<AjaxResult> CourseAndStudent(string teacherCode);
         Task<List<AjaxResult>> InputReportCard([FromBody]List<InputReportCardsDto> reportCards);
     }
 }
