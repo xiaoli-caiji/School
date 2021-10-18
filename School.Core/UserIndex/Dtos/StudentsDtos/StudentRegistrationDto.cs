@@ -10,8 +10,6 @@ namespace SchoolCore.UserIndex.Dtos
         public string UserCode { get; set; }
         [DisplayName("姓名")]
         public string Name { get; set; }
-        [DisplayName("性别")]
-        public string Sex { get; set; }
         [DisplayName("身份证号")]
         //身份证号=》年龄、生日、性别（第15位，奇男偶女）
         public string IdCardNumber { get; set; }

@@ -496,17 +496,30 @@ namespace SchoolCore.Service
         public async Task<List<AjaxResult>> InputReportCard(List<InputReportCardsDto> reportCards)
         {
             List<AjaxResult> result = new();
-            foreach (var reportCard in reportCards)
+            ReportCards report = new();
+            if (reportCards != null)
             {
-                var userID = _userRepository.GetEntities<User>(u => u.Name == reportCard.StudentName).FirstOrDefault().Id;
-                var coursrID = _courseRepository.GetEntities<Course>(c => c.CourseName == reportCard.CourseName).FirstOrDefault().Id;
-                var findReportcard = _reportCardsRepository.GetEntities<ReportCards>(rc => rc.CourseId == coursrID && rc.UserId == userID).FirstOrDefault();
-                if (findReportcard!=null)
+                foreach (var reportCard in reportCards)
                 {
-                    findReportcard.Report = reportCard.Grades;  
+                    var userID = _userRepository.GetEntities<User>(u => u.Name == reportCard.StudentName).FirstOrDefault().Id;
+                    var coursrID = _courseRepository.GetEntities<Course>(c => c.CourseName == reportCard.CourseName).FirstOrDefault().Id;
+                    var findReportcard = _reportCardsRepository.GetEntities<ReportCards>(rc => rc.CourseId == coursrID && rc.UserId == userID).FirstOrDefault();
+                    if (findReportcard != null)
+                    {
+                        findReportcard.Report = reportCard.Grades;
+                        result.Add(await _reportCardsRepository.ChangeEntitiesAsync(findReportcard));
+                    }
+                    else
+                    {
+                        report.CourseId = coursrID;
+                        report.UserId = userID;
+                        report.Report = reportCard.Grades;
+                        result.Add(await _reportCardsRepository.ChangeEntitiesAsync(report));
+                    }
+                    
                 }
-                result.Add(await _reportCardsRepository.ChangeEntitiesAsync(findReportcard));                              
             }
+            
             return result;
         }
         #endregion
