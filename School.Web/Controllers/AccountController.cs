@@ -4,6 +4,7 @@ using SchoolCore.Service;
 using System.Web;
 using System.Threading.Tasks;
 using School.Data;
+using Microsoft.AspNetCore.Authorization;
 
 namespace School.Web.Controllers
 {
@@ -11,6 +12,7 @@ namespace School.Web.Controllers
     public class AccountController : Controller
     {
         private readonly ISchoolContracts _schoolContracts;
+        
         public AccountController(ISchoolContracts schoolContracts)
         {
             _schoolContracts = schoolContracts;
@@ -21,25 +23,7 @@ namespace School.Web.Controllers
             AjaxResult userRoles = new();
             if (user.UserCode != null && user.Password != null)
             {
-                userRoles = await _schoolContracts.UserLogin(user);
-                //if (userRoles.Data.ToString().Length >= 2)
-                //{
-                //    return RedirectToAction("教师+办公室老师的主页");
-                //}
-                //else
-                //{
-                //    switch (userRoles.ToString())
-                //    {
-                //        case "TeachingTeacher":
-                //            return RedirectToAction("教师主页");
-                //        case "OfficeTeacher":
-                //            return RedirectToAction("办公室老师主页");
-                //        case "Student":
-                //            return RedirectToAction("学生主页");
-                //        case "OtherStuff":
-                //            return RedirectToAction("其他职工主页");
-                //    }
-                //}
+                userRoles = await _schoolContracts.UserLogin(user);          
             }
 
             return userRoles;

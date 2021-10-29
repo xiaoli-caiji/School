@@ -12,7 +12,10 @@ using System.Threading.Tasks;
 using School.Core.Common.Entities;
 using AutoMapper;
 using School.Core.Repository;
-using EntityConfigurationBase;
+using School.Core;
+using IdentityServer4.Validation;
+using School.Core.UserIndex.Entities;
+using School.Core.UserIndex.Dtos.OfficeTeacherDtos;
 
 namespace SchoolCore.Service
 {
@@ -29,11 +32,14 @@ namespace SchoolCore.Service
         private readonly IRepository<ReportCards> _reportCardsRepository;
         private readonly IRepository<Department> _departmentRepository;
         private readonly IRepository<AcademicCourse> _academicCourseRepository;
-
+        private readonly IRepository<News> _newsRepository;
+        private readonly IRepository<NewsType> _newsTypeRepository;
+        public const string secret = "JskduadUHLsdgasdUID1zkaosjx3h2JHdasdwef";
         public SchoolService(IMapper mapper, IRepository<User> userRepository, IRepository<UserRole> userRoleRepositoy,
             IRepository<Academic> academicRepository, IRepository<AClass> aClassRepository, IRepository<Course> courseRepository,
             IRepository<UserCourse> userCourseRepository, IRepository<ReportCards> reportCardsRepository, IRepository<Role> roleRepository,
-            IRepository<Department> departmentRepository, IRepository<AcademicCourse> academicCourseRepository)
+            IRepository<Department> departmentRepository, IRepository<AcademicCourse> academicCourseRepository, IRepository<News> newsRepository,
+            IRepository<NewsType> newsTypeRepository)
         {           
             _mapper = mapper;
             _userRepository = userRepository;
@@ -46,19 +52,67 @@ namespace SchoolCore.Service
             _reportCardsRepository = reportCardsRepository;
             _departmentRepository = departmentRepository;
             _academicCourseRepository = academicCourseRepository;
+            _newsRepository = newsRepository;
+            _newsTypeRepository = newsTypeRepository;
         }
-        #region 锁定当前用户
-        /// <summary>
-        /// 获取当前登录用户信息
-        /// </summary>
-        public static class UserInfo
-        {
-            public static string UserCode { get; set; }
-            public static string Password { get; set; }
-        }
+        #region 锁定当前用户 已采用token，该部分注销
+        ///// <summary>
+        ///// 获取当前登录用户信息
+        ///// </summary>
+        //public static class UserInfo
+        //{
+        //    public static string UserCode { get; set; }
+        //    public static string Password { get; set; }
+        //}
+
+        ////public async Task ValidateAsync(ResourceOwnerPasswordValidationContext context)
+        ////{
+        ////    UserInputDto dto = new();
+        ////    dto.UserCode = context.UserName;
+        ////    dto.Password = context.Password;
+        ////    var loginReult = await UserLogin(dto);
+        ////    if (loginReult.Type == AjaxResultType.Success)
+        ////    {
+        ////        context.Result = new GrantValidationResult(context.UserName, "password", null, "local", (Dictionary<string, object>)loginReult.Data);
+        ////    }
+        ////    else
+        ////    {
+        ////        context.Result = new GrantValidationResult(TokenRequestErrors.InvalidGrant, loginReult.Content);
+        ////    }
+        ////}
+        //public static string GetToken(UserTokenDto userTokenDto)
+        //{
+        //    IJwtAlgorithm algorithm = new HMACSHA256Algorithm();
+        //    IJsonSerializer serializer = new JsonNetSerializer();
+        //    IBase64UrlEncoder urlEncoder = new JwtBase64UrlEncoder();
+        //    IJwtEncoder encoder = new JwtEncoder(algorithm, serializer, urlEncoder);
+
+        //    DateTime time = DateTime.Now.AddMinutes(15);
+        //    userTokenDto.Exp = time.ToString();
+        //    Dictionary<string, object> dict = new()
+        //    {
+        //        { "姓名：", userTokenDto.Name },
+        //        { "账号：", userTokenDto.Code },
+        //        { "角色：", userTokenDto.Role }
+        //    };
+        //    var token = encoder.Encode(userTokenDto, secret);
+        //    return token;
+        //}
+
+        //public static IDictionary<string, object> DecodeToken(string token)
+        //{
+        //    IJsonSerializer serializer = new JsonNetSerializer();
+        //    IDateTimeProvider provider = new UtcDateTimeProvider();
+        //    IJwtValidator validator = new JwtValidator(serializer, provider);
+        //    IBase64UrlEncoder urlEncoder = new JwtBase64UrlEncoder();
+        //    IJwtAlgorithm algorithm = new HMACSHA256Algorithm();
+        //    IJwtDecoder decoder = new JwtDecoder(serializer, validator, urlEncoder, algorithm);
+        //    var dicInfo = decoder.DecodeToObject(token, secret, verify: true);//token为之前生成的字符串
+        //    return dicInfo;
+        //}
         #endregion
 
-        #region 用户登录/登出
+        #region 用户登录/登出,登出在前端重置了
         /// <summary>
         /// 用户登录界面只有账号密码
         /// 后面加验证码
@@ -67,11 +121,12 @@ namespace SchoolCore.Service
         /// <returns>有可能多重身份比如院长也讲课，所以返回的是array</returns>
         public async Task<AjaxResult> UserLogin(UserInputDto user)
         {
-            
+            ResourceOwnerPasswordValidationContext context = new();
             string content = "登陆失败！";
             AjaxResultType resultType = AjaxResultType.Error;
             //string[] roleTypes = { "" };
             UserTokenDto userTokenDto = new();
+            string data = null;
             var currentUserRole = _userRoleRepository.GetEntities<UserRole>(x => x.User.UserCode == user.UserCode && x.User.Password == user.Password);
             var currentUser = currentUserRole.Select(u => u.User).FirstOrDefault();
             if (currentUser != null)
@@ -80,27 +135,24 @@ namespace SchoolCore.Service
                 userTokenDto.Role = currentUserRole.Select(x => x.Role.RoleName).ToArray();
                 userTokenDto.Name = currentUser.Name;
                 userTokenDto.Code = user.UserCode;
-                UserInfo.UserCode = user.UserCode;
-                UserInfo.Password = user.Password;
+                // data = GetToken(userTokenDto);
+                // UserInfo.UserCode = user.UserCode;
+                // UserInfo.Password = user.Password;
                 resultType = AjaxResultType.Success;
                 content = "登陆成功！";
+                // context.UserName = currentUser.Name;
+                // context.Result = new GrantValidationResult(context.UserName, "password", null, "local", data);
             }
             else
             {
                 content += "账号或密码错误，请检查并重新输入！";
+                // context.Result = new GrantValidationResult(TokenRequestErrors.InvalidGrant, content);
             }
-            return new AjaxResult(content, userTokenDto, resultType);
+            return new AjaxResult(content, data, resultType);
         }
-
-        ///<summary>
-        ///用户登出，直接让静态为0？
-        ///</summary>
-
         public async Task<AjaxResult> UserLogout()
         {
-            UserInfo.UserCode = null;
-            UserInfo.Password = null;
-            return new AjaxResult("您已登出！", AjaxResultType.Success);
+            return new AjaxResult("登出成功！");
         }
 
         #endregion
@@ -123,23 +175,31 @@ namespace SchoolCore.Service
             if (await _userRepository.GetEntities<User>(u => u.IdCardNumber == student.IdCardNumber).AnyAsync())
             {
                 errorReasonOrSuccess = "该身份证号已存在，请检查并重新输入！";
-            }
-            else if (await _userRepository.GetEntities<User>(u => u.UserCode == student.UserCode).AnyAsync())
-            {
-                errorReasonOrSuccess = "该学号已存在，请检查并重新输入！";
-            }
+            }            
             else
             {
                 int sexNumber = 0;
-                user = _mapper.Map<User>(student);                
+                user = _mapper.Map<User>(student);
+                var studentNum = GetStudentType(student.Academic, student.Class, student.StudentType);
+                user.UserCode = DateTime.Now.Year.ToString() + studentNum + student.Num;
+                if (await _userRepository.GetEntities<User>(u => u.UserCode == user.UserCode).AnyAsync())
+                {
+                    errorReasonOrSuccess = "该学号已存在，请检查并重新输入！";
+                }
                 user.Password = student.IdCardNumber.Substring(student.IdCardNumber.Length - 7, 6);
                 sexNumber = int.Parse(student.IdCardNumber.Substring(student.IdCardNumber.Length - 2, 1));
                 user.Sex = (sexNumber % 2 == 0) ? "女" : "男";
                 user.Age = int.Parse(DateTime.Now.Year.ToString()) - int.Parse(student.IdCardNumber.Substring(student.IdCardNumber.Length - 12, 4));
+                var birthDate = student.IdCardNumber.Substring(6, 8);
+                user.BirthDate = Convert.ToDateTime(birthDate.Substring(0, 4) + '-' + birthDate.Substring(4, 2) + '-' + birthDate.Substring(6, 2));
                 user.UserAcademic = _academicRepository.GetEntities<Academic>(a => a.AcademicName == student.Academic).FirstOrDefault();
-                var aClass = _aClassRepository.GetEntities<AClass>(a => a.AClassName == student.Class).Include(a=>a.AclassUsers).FirstOrDefault();
-                aClass.AclassUsers.Add(user);
-                await _aClassRepository.ChangeEntitiesAsync(aClass);
+                var className = DateTime.Now.Year.ToString().Substring(DateTime.Now.Year.ToString().Length-2,2) + "级" + student.Academic + student.Class + "班";
+                var aClass = _aClassRepository.GetEntities<AClass>(a => a.AClassName == className).Include(a=>a.AclassUsers).FirstOrDefault();
+                if (aClass != null)
+                {
+                    aClass.AclassUsers.Add(user);
+                    await _aClassRepository.ChangeEntitiesAsync(aClass);
+                }           
                 userRole.User = user;
                 userRole.Role = role;
                 //因为中间表有User实体，所以会直接注册一个,相当于直接从中间表把User注册了，
@@ -162,7 +222,73 @@ namespace SchoolCore.Service
             }
             return new AjaxResult(errorReasonOrSuccess, studentsList, resultType);
         }
+        /// <summary>
+        /// 根据信息自动填充中间6位学号
+        /// </summary>
+        /// <param name="academic"></param>
+        /// <param name="aClass"></param>
+        /// <param name="type"></param>
+        /// <returns></returns>
 
+        public static string GetStudentType(string academic,string aClass,string type)
+        {
+            string studentType = null;
+            switch (type)
+            {
+                case "学硕全日制":
+                    studentType = "21";
+                    break;
+                case "专硕全日制":
+                    studentType = "22";
+                    break;
+                case "专硕非全日制":
+                    studentType = "52";
+                    break;
+                case "硕博连读":
+                    studentType = "23";
+                    break;
+                default:
+                    break;
+            }
+            switch (academic)
+            {
+                case "信通":
+                    studentType += "01";
+                    break;
+                case "电子":
+                    studentType += "02";
+                    break;
+                case "机械":
+                    studentType += "03";
+                    break;
+                case "航空":
+                    studentType += "04";
+                    break;
+                case "资环":
+                    studentType += "05";
+                    break;
+                case "计算机":
+                    studentType += "06";
+                    break;
+                case "经管":
+                    studentType += "07";
+                    break;
+                case "信软":
+                    studentType += "08";
+                    break;
+                case "自动化":
+                    studentType += "09";
+                    break;
+                case "通信抗干扰":
+                    studentType += "10";
+                    break;
+                case "物理":
+                    studentType += "11";
+                    break;
+            }
+            studentType += aClass;
+            return studentType;
+        }
         /// <summary>
         /// 教师注册，检查关联表
         /// </summary>
@@ -193,10 +319,20 @@ namespace SchoolCore.Service
                 sexNumber = int.Parse(teachingTeacher.IdCardNumber.Substring(teachingTeacher.IdCardNumber.Length - 2, 1));
                 user.Sex = (sexNumber % 2 == 0) ? "女" : "男";
                 user.Age = int.Parse(DateTime.Now.Year.ToString()) - int.Parse(teachingTeacher.IdCardNumber.Substring(teachingTeacher.IdCardNumber.Length - 12, 4));
+                var birthDate = teachingTeacher.IdCardNumber.Substring(6, 8);
+                user.BirthDate = Convert.ToDateTime(birthDate.Substring(0, 4) + '-' + birthDate.Substring(4, 2) + '-' + birthDate.Substring(6, 2));
+                var department = _departmentRepository.GetEntities<Department>(a => a.DepartmentName == "教学").Include(d => d.DepartmentUsers).FirstOrDefault();
+                department.DepartmentUsers.Add(user);
                 user.UserAcademic = _academicRepository.GetEntities<Academic>(a => a.AcademicName == teachingTeacher.Academic).FirstOrDefault();
-                var course = _courseRepository.GetEntities<Course>(a => a.CourseName == teachingTeacher.Course).FirstOrDefault();
-                course.TeachingTeacher = user;
-                await _courseRepository.ChangeEntitiesAsync(course);
+                if (teachingTeacher.Course != null)
+                {
+                    foreach (var c in teachingTeacher.Course)
+                    {
+                        var course = _courseRepository.GetEntities<Course>(a => a.CourseName == c).FirstOrDefault();
+                        course.TeachingTeacher = user;
+                        await _courseRepository.ChangeEntitiesAsync(course);
+                    }
+                }                                    
                 userRole.User = user;
                 userRole.Role = role;
                 await _userRoleRepository.AddEntitiesAsync(userRole);
@@ -212,7 +348,7 @@ namespace SchoolCore.Service
                     var sa = await _academicRepository.GetEntities<Academic>(a => a.Id == s.UserAcademic.Id).FirstOrDefaultAsync();
                     teacher.Academic = sa.AcademicName;
                 }
-                teacher.Course = _courseRepository.GetEntities<Course>(c => c.TeachingTeacher == s).Select(c=>c.CourseName).ToString();
+                teacher.Course = _courseRepository.GetEntities<Course>(c => c.TeachingTeacher == s).Select(c=>c.CourseName).ToList();
                 teachersList.Add(teacher);
             }
             return new AjaxResult(errorReasonOrSuccess, teachersList, resultType);
@@ -236,7 +372,7 @@ namespace SchoolCore.Service
             {
                 errorReasonOrSuccess = "该身份证号已存在，请检查并重新输入！";
             }
-            else if (await _userRepository.GetEntities<User>(u => u.UserCode == officeTeacher.UserCode).AnyAsync())
+            else if (await _userRepository.GetEntities<User>(u => u.UserCode == officeTeacher.UserCode).AnyAsync() && officeTeacher.UserCode!=null)
             {
                 errorReasonOrSuccess = "该职工编号已存在，请检查并重新输入！";
             }
@@ -248,6 +384,8 @@ namespace SchoolCore.Service
                 sexNumber = int.Parse(officeTeacher.IdCardNumber.Substring(officeTeacher.IdCardNumber.Length - 2, 1));
                 user.Sex = (sexNumber % 2 == 0) ? "女" : "男";
                 user.Age = int.Parse(DateTime.Now.Year.ToString()) - int.Parse(officeTeacher.IdCardNumber.Substring(officeTeacher.IdCardNumber.Length - 12, 4));
+                var birthDate = officeTeacher.IdCardNumber.Substring(6, 8);
+                user.BirthDate = Convert.ToDateTime(birthDate.Substring(0, 4) + '-' + birthDate.Substring(4, 2) + '-' + birthDate.Substring(6, 2));
                 user.UserAcademic = _academicRepository.GetEntities<Academic>(a => a.AcademicName == officeTeacher.Academic).FirstOrDefault();
                 var department = _departmentRepository.GetEntities<Department>(a => a.DepartmentName == officeTeacher.Department).Include(d=>d.DepartmentUsers).FirstOrDefault();
                 department.DepartmentUsers.Add(user);
@@ -299,10 +437,12 @@ namespace SchoolCore.Service
             {
                 int sexNumber = 0;
                 user = _mapper.Map<User>(otherStuff);
-                user.Password = otherStuff.IdCardNumber.Substring(otherStuff.IdCardNumber.Length - 6, 6);
-                sexNumber = int.Parse(otherStuff.IdCardNumber.Substring(otherStuff.IdCardNumber.Length - 1, 1));
+                user.Password = otherStuff.IdCardNumber.Substring(otherStuff.IdCardNumber.Length - 7, 6);
+                sexNumber = int.Parse(otherStuff.IdCardNumber.Substring(otherStuff.IdCardNumber.Length - 2, 1));
                 user.Sex = (sexNumber % 2 == 0) ? "女" : "男";
-                user.Age = int.Parse(DateTime.Now.Year.ToString()) - int.Parse(otherStuff.IdCardNumber.Substring(otherStuff.IdCardNumber.Length - 11, 4));
+                user.Age = int.Parse(DateTime.Now.Year.ToString()) - int.Parse(otherStuff.IdCardNumber.Substring(otherStuff.IdCardNumber.Length - 12, 4));
+                var birthDate = otherStuff.IdCardNumber.Substring(6, 8);
+                user.BirthDate = Convert.ToDateTime(birthDate.Substring(0, 4) + '-' + birthDate.Substring(4, 2) + '-' + birthDate.Substring(6, 2));
                 user.UserAcademic = _academicRepository.GetEntities<Academic>(a => a.AcademicName == otherStuff.Academic).FirstOrDefault();
                 var department = _departmentRepository.GetEntities<Department>(a => a.DepartmentName == otherStuff.Department).Include(d => d.DepartmentUsers).FirstOrDefault();
                 department.DepartmentUsers.Add(user);
@@ -313,7 +453,7 @@ namespace SchoolCore.Service
                 errorReasonOrSuccess = "注册成功！";
                 resultType = AjaxResultType.Success;
             }
-            stuffs = await _userRoleRepository.GetEntities<UserRole>(u => u.RoleId == 1).Select(ur => ur.User).ToListAsync();
+            stuffs = await _userRoleRepository.GetEntities<UserRole>(u => u.RoleId == 4).Select(ur => ur.User).ToListAsync();
             foreach (var s in stuffs)
             {
                 var stuff = _mapper.Map<OfficeTeacherRegistrationDto>(s);
@@ -336,25 +476,38 @@ namespace SchoolCore.Service
         /// </summary>
         /// <param name="user"></param>
         /// <returns>返回修改结果字符串</returns>
-        public async Task<AjaxResult> Settings(UserSelfSettingDto dto)
+        public async Task<AjaxResult> Settings(UserSelfSettingDto dto, string path)
         {
             //dto.UserCode = UserInfo.UserCode;
-            var user = _userRepository.GetEntities<User>(u => u.UserCode == UserInfo.UserCode).FirstOrDefault();
-            if(dto.Password!=null)
-            {
-                user.Password = dto.Password;
-            }
+            var user = _userRepository.GetEntities<User>(u => u.UserCode == dto.UserCode).FirstOrDefault();
             if (dto.PhoneNumber != null)
             {
                 user.PhoneNumber = dto.PhoneNumber;
-            }           
-            if(dto.UserClaims!=null)
+            }
+            if (dto.Name != null)
             {
-                foreach (var uc in dto.UserClaims)
-                {
-                    user.UserClaims.Add(uc);
-                }
-            }                    
+                user.Name = dto.Name;
+            }
+            if (dto.Gender != null)
+            {
+                user.Sex = dto.Gender;
+            }
+            if (dto.BirthDate != null)
+            {
+                var t = Convert.ToDateTime(dto.BirthDate);
+                user.BirthDate = t;
+            }
+            if (dto.HeadImg != null)
+            {
+                user.HeadPictureAddress = path;
+            }
+            //if (dto.UserClaims!=null)
+            //{
+            //    foreach (var uc in dto.UserClaims)
+            //    {
+            //        user.UserClaims.Add(uc);
+            //    }
+            //}                    
             var result = await _userRepository.ChangeEntitiesAsync(user);            
             return result;
         }
@@ -572,5 +725,98 @@ namespace SchoolCore.Service
         }
         #endregion
 
+        #region 新闻管理系统
+        ///<summary>
+        ///获取数据库新闻类型
+        ///</summary>
+        
+        public AjaxResult GetNewsTypes()
+        {
+            var types = _newsTypeRepository.GetEntities<NewsType>(nt => nt.NewsTypeType != null).Select(nt => nt.NewsTypeName).ToList();
+            return new AjaxResult("查询成功！", AjaxResultType.Success, types);
+        }
+
+        ///<summary>
+        ///保存新闻
+        ///两个重载，有无图片封面
+        ///</summary>
+        public async Task<AjaxResult> NewsSave(NewsSaveDto newsDto, string pictureAddress, string newsFileAddress, string fileImgAddress)
+        {
+            var t = newsDto;
+            News aNew = new();
+            //aNew = _mapper.Map<News>(newsDto);
+            aNew.NewsName = newsDto.NewsName;
+            aNew.NewsWriter = newsDto.NewsWriter;
+            if (newsDto.NewsContent == null)
+            {
+                aNew.NewsFileAddress = newsFileAddress;
+            }
+            else
+            {
+                aNew.NewsContentAddress = newsFileAddress;
+            }
+            aNew.NewsCoverType = newsDto.NewsCoverType;
+            aNew.NewsCoverAddressOrTitle = pictureAddress;
+            aNew.NewsImgsAddress = fileImgAddress;
+            aNew.NewsShowStartTime = Convert.ToDateTime(newsDto.NewsStartTime);
+            aNew.NewsShowEndTime = Convert.ToDateTime(newsDto.NewsEndTime);
+            aNew.NewsWriteTime = Convert.ToDateTime(newsDto.NewsUploadTime);
+            var newsType = _newsTypeRepository.GetEntities<NewsType>(nt => nt.NewsTypeName == newsDto.NewsType).FirstOrDefault();
+            if (newsType != null)
+            {
+                aNew.NewsType = newsType;
+            }
+            var result = await _newsRepository.AddEntitiesAsync(aNew);
+            return result;
+        }
+        public async Task<AjaxResult> NewsSave(NewsSaveDto newsDto, string newsFileAddress, string htmlImgAddress)
+        {
+            var s = newsDto;
+            News news = new();
+            //news = _mapper.Map<News>(newsDto);
+            news.NewsName = newsDto.NewsName;
+            news.NewsWriter = newsDto.NewsWriter;
+            news.NewsCoverType = newsDto.NewsCoverType;
+            if (newsDto.NewsContent == null)
+            {
+                news.NewsFileAddress = newsFileAddress;
+            }
+            else
+            {
+                news.NewsContentAddress = newsFileAddress;
+            }
+            if (newsDto.NewsCover != null)
+            {
+                news.NewsCoverAddressOrTitle = newsDto.NewsCover;
+            }
+            news.NewsImgsAddress = htmlImgAddress;
+            news.NewsShowStartTime = Convert.ToDateTime(newsDto.NewsStartTime);
+            news.NewsShowEndTime = Convert.ToDateTime(newsDto.NewsEndTime);
+            news.NewsWriteTime = Convert.ToDateTime(newsDto.NewsUploadTime);
+            var newsType = _newsTypeRepository.GetEntities<NewsType>(nt => nt.NewsTypeName == newsDto.NewsType).FirstOrDefault();
+            if (newsType != null)
+            {
+                news.NewsType = newsType;
+            }
+            var result = await _newsRepository.AddEntitiesAsync(news);
+            return result;
+        }
+
+        ///<summary>
+        ///获取新闻
+        ///</summary>
+        public AjaxResult GetNews()
+        {
+            AjaxResult result = new();
+            var news = _newsRepository.GetEntities<News>(n => n.NewsContentAddress != null).ToList();
+            if (news.Count != 0)
+            {
+                result.Content = "查询成功！";
+                result.Data = news;
+            }
+            return result;
+        }
+
+        #endregion
     }
 }

@@ -19,9 +19,7 @@ namespace School.Web.Controllers
         public async Task<AjaxResult> StudentRegistration([FromBody]StudentRegistrationDto student)
         {//弹窗的内容：Content，数据：data
             var registrationResult = await _schoolContracts.StudentRegistration(student);
-
             return registrationResult;
-
         }
 
         [HttpPost]
@@ -29,7 +27,6 @@ namespace School.Web.Controllers
         {
             var registrationResult = await _schoolContracts.TeachingTeacherRegistration(teachingTeacher);
             return registrationResult;
-
         }
 
         [HttpPost]

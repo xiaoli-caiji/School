@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using School.Core.UserIndex.Dtos;
+using School.Core.UserIndex.Dtos.OfficeTeacherDtos;
 using School.Core.UserIndex.Dtos.StudentsDtos;
 using School.Data;
 using SchoolCore.Dtos;
@@ -19,12 +20,16 @@ namespace SchoolCore.Service
         Task<AjaxResult> TeachingTeacherRegistration(TeachingTeacherRegistrationDto teachingTeacher);
         Task<AjaxResult> OfficeTeacherRegistration(OfficeTeacherRegistrationDto officeTeacher);
         Task<AjaxResult> OtherStuffRegistration(OtherStuffRegistrationDto otherStuff);
-        Task<AjaxResult> Settings(UserSelfSettingDto dto);
+        Task<AjaxResult> Settings(UserSelfSettingDto dto, string path);
         Task<AjaxResult> GetCourses(CourseInputDto course);
         Task<AjaxResult> ChooseCourses(CourseChooseDto dto);
         Task<AjaxResult> GetReportCard(string userCode);
         Task<AjaxResult> HasChoosen(UserInputDto user);
         Task<AjaxResult> CourseAndStudent(string teacherCode);
         Task<List<AjaxResult>> InputReportCard([FromBody]List<InputReportCardsDto> reportCards);
+        AjaxResult GetNewsTypes();
+        Task<AjaxResult> NewsSave(NewsSaveDto newsDto, string pictureAddress, string newsFileAddress, string filImgsAddress);
+        Task<AjaxResult> NewsSave(NewsSaveDto newsDto, string newsFileAddress, string htmlImgAddress);
+        AjaxResult GetNews();
     }
 }

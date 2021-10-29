@@ -55,6 +55,69 @@ namespace School.Web.Migrations
                     b.ToTable("ReportCards");
                 });
 
+            modelBuilder.Entity("School.Core.UserIndex.Entities.News", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    b.Property<string>("NewsContentAddress")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("NewsCoverAddressOrTitle")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("NewsCoverType")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("NewsFileAddress")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("NewsImgsAddress")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("NewsName")
+                        .HasColumnType("longtext");
+
+                    b.Property<DateTime?>("NewsShowEndTime")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime?>("NewsShowStartTime")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<int?>("NewsTypeId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("NewsWriteTime")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("NewsWriter")
+                        .HasColumnType("longtext");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("NewsTypeId");
+
+                    b.ToTable("News");
+                });
+
+            modelBuilder.Entity("School.Core.UserIndex.Entities.NewsType", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    b.Property<string>("NewsTypeName")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("NewsTypeType")
+                        .HasColumnType("longtext");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("NewsTypes");
+                });
+
             modelBuilder.Entity("SchoolCore.Entities.AClass", b =>
                 {
                     b.Property<int>("Id")
@@ -220,8 +283,14 @@ namespace School.Web.Migrations
                     b.Property<int>("Age")
                         .HasColumnType("int");
 
+                    b.Property<DateTime?>("BirthDate")
+                        .HasColumnType("datetime(6)");
+
                     b.Property<int?>("DepartmentId")
                         .HasColumnType("int");
+
+                    b.Property<string>("HeadPictureAddress")
+                        .HasColumnType("longtext");
 
                     b.Property<string>("IdCardNumber")
                         .HasColumnType("longtext");
@@ -321,7 +390,7 @@ namespace School.Web.Migrations
 
             modelBuilder.Entity("School.Core.Common.Entities.ReportCards", b =>
                 {
-                    b.HasOne("SchoolCore.Entities.Course", "Courses")
+                    b.HasOne("SchoolCore.Entities.Course", "Course")
                         .WithMany()
                         .HasForeignKey("CourseId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -333,9 +402,18 @@ namespace School.Web.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("Courses");
+                    b.Navigation("Course");
 
                     b.Navigation("Student");
+                });
+
+            modelBuilder.Entity("School.Core.UserIndex.Entities.News", b =>
+                {
+                    b.HasOne("School.Core.UserIndex.Entities.NewsType", "NewsType")
+                        .WithMany("News")
+                        .HasForeignKey("NewsTypeId");
+
+                    b.Navigation("NewsType");
                 });
 
             modelBuilder.Entity("SchoolCore.Entities.AClass", b =>
@@ -450,6 +528,11 @@ namespace School.Web.Migrations
                     b.Navigation("Role");
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("School.Core.UserIndex.Entities.NewsType", b =>
+                {
+                    b.Navigation("News");
                 });
 
             modelBuilder.Entity("SchoolCore.Entities.AClass", b =>

@@ -1,6 +1,7 @@
 using JetBrains.Annotations;
 using Microsoft.EntityFrameworkCore;
 using School.Core.Common.Entities;
+using School.Core.UserIndex.Entities;
 using SchoolCore.Entities;
 using System.Diagnostics.CodeAnalysis;
 
@@ -29,6 +30,8 @@ namespace SchoolCore
         public DbSet<UserCourse> UserCourses { get; set; }    
         public DbSet<ErrorType> ErrorTypes { get; set; }
         public DbSet<ReportCards> ReportCards { get; set; }
+        public DbSet<News> News { get; set; }
+        public DbSet<NewsType> NewsTypes { get; set; }
 
         //protected override void OnModelCreating(ModelBuilder modelBuilder)
         //{

@@ -6,8 +6,8 @@ namespace SchoolCore.UserIndex.Dtos
     public class StudentRegistrationDto
     {
         //学号=》学院、年级、班级
-        [DisplayName("学号")]
-        public string UserCode { get; set; }
+        [DisplayName("学生类型")]
+        public string StudentType { get; set; }
         [DisplayName("姓名")]
         public string Name { get; set; }
         [DisplayName("身份证号")]
@@ -23,6 +23,8 @@ namespace SchoolCore.UserIndex.Dtos
         [DisplayName("学院")]
         public string Academic { get; set; }
         [DisplayName("班级")]
-        public string Class { get; set; }               
+        public string Class { get; set; }  
+        [DisplayName("编号")]
+        public string Num { get; set; }
     }
 }

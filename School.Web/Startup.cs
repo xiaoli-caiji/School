@@ -1,4 +1,4 @@
-using EntityConfigurationBase;
+using IdentityServer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
@@ -17,10 +17,14 @@ namespace School.Web
     public class Startup
     {
         readonly string MyAllowSpecificOrigins = "_myAllowSpecificOrigins";
-        public Startup(IConfiguration configuration)
+        public Microsoft.AspNetCore.Hosting.IHostingEnvironment Environment { get; }
+
+        public Startup(IConfiguration configuration, Microsoft.AspNetCore.Hosting.IHostingEnvironment environment)
         {
             Configuration = configuration;
+            Environment = environment;
         }
+
 
         public IConfiguration Configuration { get; }
 
@@ -40,17 +44,52 @@ namespace School.Web
                 options.AddPolicy(MyAllowSpecificOrigins, builder =>
                  {
                      builder.AllowAnyHeader()
-                            .AllowAnyMethod()                           
+                            .AllowAnyMethod()
                             .SetIsOriginAllowed(_ => true)
                             .AllowCredentials();
                  });
             });
+            //鉴别权限
+            services.AddAuthorization(options =>
+            {
+                options.AddPolicy("ApiScope", policy =>
+                {
+                    policy.RequireAuthenticatedUser();
+                    policy.RequireClaim("scope", "api1");
+                });
+            });
 
+            var builder = services.AddIdentityServer()
+                    .AddInMemoryIdentityResources(Config.GetIdentityResources())
+                    .AddProfileService<SchoolProfileService>()
+                    //.AddInMemoryApiResources(Config.GetApis())
+                    .AddInMemoryClients(Config.GetClients())
+                    // .AddTestUsers(Config.GetUsers());
+                    .AddResourceOwnerValidator<ResourceOwnerPasswordVaildator>()
+                    .AddInMemoryApiScopes(Config.ApiScopes());
+
+            if (Environment.IsDevelopment())
+            {
+                builder.AddDeveloperSigningCredential();
+            }
             //注册Swagger生成器，定义一个和多个Swagger 文档
             services.AddSwaggerGen(c =>
             {
                 c.SwaggerDoc("v1", new OpenApiInfo { Title = "My API", Version = "v1" });
             });
+
+
+            services.AddAuthentication("Bearer")
+                .AddJwtBearer("Bearer", options =>
+                {
+                    options.Authority = "https://localhost:13001";
+                    //options.RequireHttpsMetadata = false;
+                    //options.Audience = "school";
+                    options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters
+                    {
+                        ValidateAudience = false
+                    };
+                });
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -67,20 +106,16 @@ namespace School.Web
                 app.UseHsts();
             }
 
+            app.UseCors(MyAllowSpecificOrigins);
+            app.UseIdentityServer();          
             app.UseHttpsRedirection();
             app.UseStaticFiles();
 
             app.UseRouting();
-
+            //身份验证
             app.UseAuthorization();
-            app.UseCors(MyAllowSpecificOrigins);
 
-            app.UseEndpoints(endpoints =>
-            {
-                endpoints.MapControllerRoute(
-                    name: "default",
-                    pattern: "{controller=Login}/{action=Login}/{id?}");
-            });
+
             app.UseSwagger();
             //启用中间件服务队swagger - ui，指定Swagger JSON终结点
             app.UseSwaggerUI(c =>
@@ -88,6 +123,16 @@ namespace School.Web
                 c.SwaggerEndpoint("/swagger/v1/swagger.json", "My API V1");
                 c.RoutePrefix = string.Empty;
             });
+            app.UseEndpoints(endpoints =>
+            {
+                endpoints.MapControllerRoute(
+                    name: "default",
+                    pattern: "{controller=Login}/{action=Login}/{id?}");
+            });
+            //授权
+            app.UseAuthentication();
+
+
         }
     }
 }
