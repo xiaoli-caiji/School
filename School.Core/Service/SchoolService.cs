@@ -803,16 +803,69 @@ namespace SchoolCore.Service
         }
 
         ///<summary>
-        ///获取新闻
+        ///获取新闻（所有新闻），给新闻管理员看
+        ///默认非HTML即文件，所以判断里只有两种情况
+        ///include 新闻类型的时候出问题，不能正常返回
         ///</summary>
         public AjaxResult GetNews()
         {
             AjaxResult result = new();
+            List<News> news = new();            
+            news = _newsRepository.GetEntities<News>(n => n.NewsContentAddress != null || n.NewsFileAddress != null).Include(n=>n.NewsType).ToList();           
+            if (news.Count != 0)
+            {
+                List<News> HtmlNews = new();
+                List<News> FileNews = new();
+                Dictionary<string, List<News>> AllNews = new();
+                foreach(var n in news)
+                {
+                    if (n.NewsContentAddress != null)
+                    {                      
+                        HtmlNews.Add(n);
+                    }
+                    else
+                    {
+                        FileNews.Add(n);
+                    }                    
+                }
+                AllNews.Add("htmlNews", HtmlNews);
+                AllNews.Add("fileNews", FileNews);
+                result.Content = "查询成功！";
+                result.Data = AllNews;
+            }
+            return result;
+        }
+
+        ///<summary>
+        ///获取未过期的新闻，在首页展示
+        ///</summary>
+
+        public AjaxResult ShowNews()
+        {
+            AjaxResult result = new();
+            var now = int.Parse(DateTime.Now.ToString("yyMMdd"));
             var news = _newsRepository.GetEntities<News>(n => n.NewsContentAddress != null).ToList();
             if (news.Count != 0)
             {
+                List<News> newsCoverIsImg = new();
+                List<News> newsCoverIsTitle = new();
+                Dictionary<string, List<News>> newsLists = new();
+                foreach (var n in news)
+                {
+                    var s = n.NewsShowEndTime - DateTime.Now;
+                    if (n.NewsCoverType == "图片" && n.NewsCoverAddressOrTitle != null && DateTime.Compare(n.NewsShowEndTime,DateTime.Now)>=0)
+                    {
+                        newsCoverIsImg.Add(n);
+                    }
+                    else if (n.NewsCoverType == "标题" && DateTime.Compare(n.NewsShowEndTime, DateTime.Now) >= 0)
+                    {
+                        newsCoverIsTitle.Add(n);
+                    }
+                }
+                newsLists.Add("CoverIsImg", newsCoverIsImg);
+                newsLists.Add("CoverIsTitle", newsCoverIsTitle);
                 result.Content = "查询成功！";
-                result.Data = news;
+                result.Data = newsLists;
             }
             return result;
         }

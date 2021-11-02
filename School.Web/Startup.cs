@@ -7,6 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.OpenApi.Models;
+using Newtonsoft.Json;
 using School.Core.Repository;
 using School.Web.MappingMapper;
 using SchoolCore;
@@ -32,7 +33,10 @@ namespace School.Web
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddDbContext<BaseDbContext>(options => options.UseMySql(Configuration.GetConnectionString("BaseDbContext"), MySqlServerVersion.LatestSupportedServerVersion));
-
+            services.AddControllers().AddNewtonsoftJson(option =>
+                //忽略循环引用
+                option.SerializerSettings.ReferenceLoopHandling = ReferenceLoopHandling.Ignore
+            );
             services.AddRazorPages();
             services.AddMvc();
             //AutoMapper这个以来的包：AutoMapper.Extensions.Microsoft.DependencyInjection

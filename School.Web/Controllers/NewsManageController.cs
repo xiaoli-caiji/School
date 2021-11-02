@@ -90,6 +90,10 @@ namespace School.Web.Controllers
             {
                 Directory.CreateDirectory(htmlPath);
             }
+            if(!Directory.Exists(fileImgsPath))
+            {
+                Directory.CreateDirectory(fileImgsPath);
+            }
 
             // 判断文稿类型是上传还是在线,对上传的图片列表进行处理
             if (dto.NewsFile != null && dto.NewsContent == null)
@@ -238,10 +242,10 @@ namespace School.Web.Controllers
                 {
                     foreach (var img in Imgs)
                     {
-                        using (FileStream fs = System.IO.File.Create(img.Value))
+                        using (FileStream fs2 = System.IO.File.Create(img.Value))
                         {
-                            img.Key.CopyTo(fs);
-                            fs.Flush();
+                            img.Key.CopyTo(fs2);
+                            fs2.Flush();
                         }
                     }
                 }
@@ -249,11 +253,24 @@ namespace School.Web.Controllers
             return result;
         }
 
+        /// <summary>
+        /// 根据封面内容分成两种，展示在页面的不同位置
+        /// </summary>
+        /// <returns></returns>
+
         [HttpGet]
         public AjaxResult GetNews()
         {
             AjaxResult result;
             result = _schoolContracts.GetNews();
+            return result;
+        }
+
+        [HttpGet]
+        public AjaxResult ShowNews()
+        {
+            AjaxResult result;
+            result = _schoolContracts.ShowNews();
             return result;
         }
     }

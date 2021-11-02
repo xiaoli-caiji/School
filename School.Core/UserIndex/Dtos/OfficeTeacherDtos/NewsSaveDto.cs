@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Http;
+using System;
 using System.Collections.Generic;
 
 namespace School.Core.UserIndex.Dtos.OfficeTeacherDtos
@@ -9,9 +10,9 @@ namespace School.Core.UserIndex.Dtos.OfficeTeacherDtos
         public string NewsName { get; set; }
         public string NewsType { get; set; }
         public string NewsWriter { get; set; }
-        public string NewsStartTime { get; set; }
-        public string NewsEndTime { get; set; }
-        public string NewsUploadTime { get; set; }
+        public DateTime NewsStartTime { get; set; }
+        public DateTime NewsEndTime { get; set; }
+        public DateTime NewsUploadTime { get; set; }
         public string NewsCover { get; set; }
         public string NewsCoverType { get; set; }
         public string NewsContent { get; set; }

@@ -12,9 +12,9 @@ namespace School.Core.UserIndex.Entities
         public string NewsFileAddress { get; set; }
         public string NewsCoverType { get; set; }
         public string NewsCoverAddressOrTitle { get; set; }
-        public DateTime? NewsShowStartTime { get; set; }
-        public DateTime? NewsShowEndTime { get; set; }
-        public DateTime? NewsWriteTime { get; set; }
+        public DateTime NewsShowStartTime { get; set; }
+        public DateTime NewsShowEndTime { get; set; }
+        public DateTime NewsWriteTime { get; set; }
         public virtual NewsType NewsType { get; set; }
     }
 }
