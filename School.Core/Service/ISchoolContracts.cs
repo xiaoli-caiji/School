@@ -32,5 +32,6 @@ namespace SchoolCore.Service
         Task<AjaxResult> NewsSave(NewsSaveDto newsDto, string newsFileAddress, string htmlImgAddress);
         AjaxResult GetNews();
         AjaxResult ShowNews();
+        Task<AjaxResult> NewsEdit(NewsSaveDto newsDto, int? newsId, string rootPath);
     }
 }

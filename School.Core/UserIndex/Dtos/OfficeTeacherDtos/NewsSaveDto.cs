@@ -6,7 +6,7 @@ namespace School.Core.UserIndex.Dtos.OfficeTeacherDtos
 {
     public class NewsSaveDto
     {
-        
+        public int? NewsId { get; set; }
         public string NewsName { get; set; }
         public string NewsType { get; set; }
         public string NewsWriter { get; set; }
@@ -18,5 +18,6 @@ namespace School.Core.UserIndex.Dtos.OfficeTeacherDtos
         public string NewsContent { get; set; }
         public List<IFormFile> NewsPictures { get; set; }
         public IFormFile NewsFile { get; set; }
+        public List<string> DeletePicture { get; set; }
     }
 }

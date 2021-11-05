@@ -61,7 +61,7 @@ namespace School.Web.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
-                    b.Property<string>("NewsContentAddress")
+                    b.Property<string>("NewsContent")
                         .HasColumnType("longtext");
 
                     b.Property<string>("NewsCoverAddressOrTitle")

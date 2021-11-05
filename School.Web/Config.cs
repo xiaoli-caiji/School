@@ -91,7 +91,7 @@ namespace IdentityServer
                 {
                     ClientId = "ro.client",
                     AllowedGrantTypes = GrantTypes.ResourceOwnerPassword,
-                    AllowedCorsOrigins = { "http://localhost:9528"},
+                    AllowedCorsOrigins = { "http://localhost:9528" },
                     ClientSecrets =
                     {
                         new Secret("secret".Sha256())

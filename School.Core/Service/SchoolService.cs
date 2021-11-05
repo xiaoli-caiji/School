@@ -16,6 +16,10 @@ using School.Core;
 using IdentityServer4.Validation;
 using School.Core.UserIndex.Entities;
 using School.Core.UserIndex.Dtos.OfficeTeacherDtos;
+using System.IO;
+using System.Drawing;
+using System.Drawing.Imaging;
+using System.Text;
 
 namespace SchoolCore.Service
 {
@@ -729,7 +733,6 @@ namespace SchoolCore.Service
         ///<summary>
         ///获取数据库新闻类型
         ///</summary>
-        
         public AjaxResult GetNewsTypes()
         {
             var types = _newsTypeRepository.GetEntities<NewsType>(nt => nt.NewsTypeType != null).Select(nt => nt.NewsTypeName).ToList();
@@ -753,7 +756,7 @@ namespace SchoolCore.Service
             }
             else
             {
-                aNew.NewsContentAddress = newsFileAddress;
+                aNew.NewsContent = newsDto.NewsContent;
             }
             aNew.NewsCoverType = newsDto.NewsCoverType;
             aNew.NewsCoverAddressOrTitle = pictureAddress;
@@ -783,7 +786,7 @@ namespace SchoolCore.Service
             }
             else
             {
-                news.NewsContentAddress = newsFileAddress;
+                news.NewsContent = newsDto.NewsContent;
             }
             if (newsDto.NewsCover != null)
             {
@@ -803,6 +806,152 @@ namespace SchoolCore.Service
         }
 
         ///<summary>
+        ///编辑更改新闻
+        ///编辑HTML文件=》更改封面+内容
+        ///编辑已有上传=》更改封面+新闻稿+备选配图
+        ///原理都是先删原来的再用相同的完整路径存新的，数据库的改动小
+        ///</summary>
+        public async Task<AjaxResult> NewsEdit(NewsSaveDto newsDto, int? newsId, string rootPath)
+        {
+            AjaxResult result = new();
+            var news = _newsRepository.GetEntities<News>(n => n.Id == newsId).Include(n => n.NewsType).FirstOrDefault();
+
+            // 先把可以直接赋值不涉及到内容地址的属性更改一下
+            news.NewsCoverType = newsDto.NewsCoverType;
+            news.NewsName = newsDto.NewsName;
+            news.NewsShowStartTime = newsDto.NewsStartTime;
+            news.NewsShowEndTime = newsDto.NewsEndTime;
+            var newsType = _newsTypeRepository.GetEntities<NewsType>(nt => nt.NewsTypeName == newsDto.NewsType).FirstOrDefault();
+            if (newsType != null)
+            {
+                news.NewsType = newsType;
+            }
+            news.NewsWriter = newsDto.NewsWriter;
+            news.NewsWriteTime = newsDto.NewsUploadTime;
+
+            //更改封面内容
+            if (newsDto.NewsCoverType == "图片")
+            {
+                FileStream fileStream = File.OpenRead(rootPath + news.NewsCoverAddressOrTitle);                
+                var fileLength = (int)fileStream.Length;
+                byte[] image = new byte[fileLength];
+                fileStream.Read(image, 0, fileLength);
+                 
+                if (newsDto.NewsCover!=null && newsDto.NewsCover.StartsWith("data"))
+                {
+                    byte[]  newImage = Convert.FromBase64String(newsDto.NewsCover.Substring(newsDto.NewsCover.IndexOf(",") + 1));
+                    
+                    if (!image.Equals(newImage))
+                    {
+                        var s = rootPath + news.NewsCoverAddressOrTitle;
+                        var s1 = s.Remove(s.LastIndexOf(".") - 17);
+                        var s2 = s.Remove(0, s.LastIndexOf(".") - 17);
+                        DirectoryInfo directoryInfo = new(s1);
+                        FileSystemInfo[] files = directoryInfo.GetFileSystemInfos();
+                        foreach (var file in files)
+                        {
+
+                            if (file.Name == s2)
+                            {
+                                var s3 = file.Name;
+                                fileStream.Close();
+                                File.Delete(file.FullName);
+                            }
+                        }
+                        MemoryStream ms = new(newImage);
+                        Bitmap bmp = new(ms);
+                        bmp.Save(rootPath + news.NewsCoverAddressOrTitle, ImageFormat.Bmp);
+                        ms.Close();
+                    }
+                }
+                
+                //result.Data = image;
+            }
+            else
+            {
+                news.NewsCoverAddressOrTitle = newsDto.NewsCover;
+            }
+
+            //更改在线HTML稿件的内容,先删后存
+            if(newsDto.NewsContent != null)
+            {
+                news.NewsContent = newsDto.NewsContent;
+            }
+
+            //更改已有上传的文件
+            if(newsDto.NewsFile != null)
+            {
+                var s = rootPath + news.NewsFileAddress;
+                var s1 = s.Remove(s.LastIndexOf(".") - 17);
+                var fileName = s.Remove(0, s.LastIndexOf(".") - 17);
+                DirectoryInfo directoryInfo = new(s1);
+                FileSystemInfo[] files = directoryInfo.GetFileSystemInfos();
+                foreach(var file in files)
+                {
+                    if(file.Name == fileName)
+                    {
+                        File.Delete(file.FullName);
+                        using (FileStream fs = System.IO.File.Create(s))
+                        {
+                            newsDto.NewsFile.CopyTo(fs);
+                            fs.Flush();
+                        }
+                    }
+                }
+            }
+
+            //更改备选插图（有的话）,直接根据前台传过来的删除和新增的列表操作，避免了增减逻辑的漏洞
+            string sAll = null;
+            List<string> sList = null;
+            string spp = null;
+            string originPath = null;    
+            //先根据删除的列表删除对应的图片
+            if (newsDto.DeletePicture != null)
+            {
+                sAll = news.NewsImgsAddress;//获取原来的所有路径——长字符串
+                sList = sAll.Split(",").ToList();//要删除，所以肯定有原本的文件夹，不用做判断 
+                originPath = sList[0].Remove(sList[0].LastIndexOf(".") - 17);
+                spp = rootPath + sList[0].Remove(sList[0].LastIndexOf(".") - 17);
+                DirectoryInfo directoryInfo = new(spp);
+                FileSystemInfo[] pictures = directoryInfo.GetFileSystemInfos();
+                foreach(var s in newsDto.DeletePicture)
+                {
+                    if(s != null)
+                    {
+                        var pictureName = s.Remove(0, s.LastIndexOf(".") - 17);
+                        if (sAll.Contains(s))
+                        {
+                            sList.Remove(s);
+                            File.Delete(rootPath + s);
+                        }
+                    }
+                }
+            }
+            // 再增加新的列表（还是在原来的文件夹下）
+            if (newsDto.NewsPictures != null)
+            {
+                foreach(var img in newsDto.NewsPictures)
+                {
+                    var now = DateTime.Now;
+                    var strDateTime = DateTime.Now.ToString("yyMMddhhmmssfff");
+                    string strRandom = Convert.ToString(new Random().Next(10, 99));
+                    var pE = Path.GetExtension(img.FileName);
+                    using (FileStream fs = File.Create(spp + strDateTime + strRandom + pE))
+                    {
+                        img.CopyTo(fs);
+                        fs.Flush();
+                    }
+                    sList.Add(originPath + strDateTime + strRandom + pE);
+                }
+                
+            }
+            news.NewsImgsAddress = string.Join(",", sList.ToArray());
+
+            result = await _newsRepository.ChangeEntitiesAsync(news);
+            return result;
+        }
+
+        ///<summary>
         ///获取新闻（所有新闻），给新闻管理员看
         ///默认非HTML即文件，所以判断里只有两种情况
         ///include 新闻类型的时候出问题，不能正常返回
@@ -811,7 +960,7 @@ namespace SchoolCore.Service
         {
             AjaxResult result = new();
             List<News> news = new();            
-            news = _newsRepository.GetEntities<News>(n => n.NewsContentAddress != null || n.NewsFileAddress != null).Include(n=>n.NewsType).ToList();           
+            news = _newsRepository.GetEntities<News>(n => n.NewsContent != null || n.NewsFileAddress != null).Include(n=>n.NewsType).ToList();           
             if (news.Count != 0)
             {
                 List<News> HtmlNews = new();
@@ -819,7 +968,7 @@ namespace SchoolCore.Service
                 Dictionary<string, List<News>> AllNews = new();
                 foreach(var n in news)
                 {
-                    if (n.NewsContentAddress != null)
+                    if (n.NewsContent != null)
                     {                      
                         HtmlNews.Add(n);
                     }
@@ -839,12 +988,11 @@ namespace SchoolCore.Service
         ///<summary>
         ///获取未过期的新闻，在首页展示
         ///</summary>
-
         public AjaxResult ShowNews()
         {
             AjaxResult result = new();
             var now = int.Parse(DateTime.Now.ToString("yyMMdd"));
-            var news = _newsRepository.GetEntities<News>(n => n.NewsContentAddress != null).ToList();
+            var news = _newsRepository.GetEntities<News>(n => n.NewsContent != null).ToList();
             if (news.Count != 0)
             {
                 List<News> newsCoverIsImg = new();

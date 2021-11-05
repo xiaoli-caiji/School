@@ -26,19 +26,19 @@ namespace School.Web.Controllers
             _hostingEnvironment = hostingEnvironment;
         }
 
-        [HttpPost]
-        public AjaxResult UpLoadHtmlPictures(List<string> pictureUrls)
-        {
-            AjaxResult result = new();
-            var webRootPath = _hostingEnvironment.WebRootPath;
-            var now = DateTime.Now;
-            var pictureUrlsPath = string.Format("/Resource/News/HtmlFiles/HtmlPictures/{0}/{1}/{2}", now.ToString("yyyy"), now.ToString("MM"), now.ToString("dd"));
-            foreach (var pu in pictureUrls)
-            {
+        //[HttpPost]
+        //public AjaxResult UpLoadHtmlPictures(List<string> pictureUrls)
+        //{
+        //    AjaxResult result = new();
+        //    var webRootPath = _hostingEnvironment.WebRootPath;
+        //    var now = DateTime.Now;
+        //    var pictureUrlsPath = string.Format("/Resource/News/HtmlFiles/HtmlPictures/{0}/{1}/{2}", now.ToString("yyyy"), now.ToString("MM"), now.ToString("dd"));
+        //    foreach (var pu in pictureUrls)
+        //    {
 
-            }
-            return result;
-        } 
+        //    }
+        //    return result;
+        //} 
 
         [HttpGet]
         public AjaxResult GetNewsTypes()
@@ -48,6 +48,7 @@ namespace School.Web.Controllers
         }
 
         /// <summary>
+        /// 新增新闻实体
         /// 默认在线编辑和投稿二选一，不具备在线稿件+附件功能
         /// 默认NewsCover不为空，前端判断非图片就传标题给后端
         /// </summary>
@@ -61,20 +62,18 @@ namespace School.Web.Controllers
             // 为生成随机名字的文件做准备
             var now = DateTime.Now;
             var strDateTime = DateTime.Now.ToString("yyMMddhhmmssfff");
-            var strRandom = Convert.ToString(new Random().Next(10, 99));
+            
+            string strRandom = null;
 
             var FilePath = string.Format("/Resource/News/NewsFiles/{0}/{1}/{2}/", now.ToString("yyyy"), now.ToString("MM"), now.ToString("dd"));
             var FileImgsPath = string.Format("/Resource/News/FileImgs/{0}/{1}/{2}/", now.ToString("yyyy"), now.ToString("MM"), now.ToString("dd"));
-            var HtmlPath = string.Format("/Resource/News/HtmlFiles/{0}/{1}/{2}/", now.ToString("yyyy"), now.ToString("MM"), now.ToString("dd"));
+            //在线稿件插入图片可以直接看到，因此省略单独存的步骤
             // var HtmlImgsPath = string.Format("/Resource/News/HtmlImgs/{0}/{1}/{2}/", now.ToString("yyyy"), now.ToString("MM"), now.ToString("dd"));
             var filePath = webRootPath + FilePath;
             var fileImgsPath = webRootPath + FileImgsPath;
-            var htmlPath = webRootPath + HtmlPath;
-            // var htmlImgsPath = webRootPath + HtmlImgsPath;
 
             string fileName = null;
             string imgsNames = null;
-            string htmlName = null;
             List<string> imgNames = new();
             Dictionary<IFormFile,string> Imgs = new();
 
@@ -86,20 +85,19 @@ namespace School.Web.Controllers
             {
                 Directory.CreateDirectory(filePath);
             }
-            if (!Directory.Exists(htmlPath))
-            {
-                Directory.CreateDirectory(htmlPath);
-            }
+
             if(!Directory.Exists(fileImgsPath))
             {
                 Directory.CreateDirectory(fileImgsPath);
             }
 
             // 判断文稿类型是上传还是在线,对上传的图片列表进行处理
+            // 上传文稿
             if (dto.NewsFile != null && dto.NewsContent == null)
             {
                 var fE = Path.GetExtension(dto.NewsFile.FileName);
-                if(fileFilt.IndexOf(fE.ToLower(), StringComparison.Ordinal) <= -1)
+                strRandom = Convert.ToString(new Random().Next(10, 99));
+                if (fileFilt.IndexOf(fE.ToLower(), StringComparison.Ordinal) <= -1)
                 {
                     result.Content = "请上传.dox/.docx/.pdf格式的文件！";
                 }
@@ -113,6 +111,7 @@ namespace School.Web.Controllers
                     foreach (var p in dto.NewsPictures)
                     {
                         var pE = Path.GetExtension(p.FileName);
+                        strRandom = Convert.ToString(new Random().Next(10, 99));
                         if (pictureFilt.IndexOf(pE.ToLower(), StringComparison.Ordinal) <= -1)
                         {
                             result.Content = "请上传.jpg/.jpeg/.png/.gif格式的文件！";
@@ -124,14 +123,12 @@ namespace School.Web.Controllers
                             imgNames.Add(FileImgsPath + strDateTime + strRandom + pE);
                         }
                     }
-                    imgsNames = imgNames.ToString();
+                    imgsNames = string.Join(",", imgNames.ToArray());
                 }
                 
             }
             else if (dto.NewsContent != null && dto.NewsFile == null)
             {
-                htmlName = strDateTime + strRandom + ".html";
-                // System.IO.File.AppendAllText(htmlPath + htmlName, dto.NewsContent, Encoding.Default);
                 if (dto.NewsPictures != null)
                 {
                     foreach (var p in dto.NewsPictures)
@@ -144,10 +141,10 @@ namespace School.Web.Controllers
                         else
                         {
                             // fileAndName.Add(p, strDateTime + strRandom + pE);
-                            imgNames.Add(strDateTime + strRandom + pE);
+                            imgNames.Add(FileImgsPath + strDateTime + strRandom + pE);
                         }
                     }
-                    imgsNames = imgNames.ToString();
+                    imgsNames = string.Join(",", imgNames.ToArray());
                 }
             }
             else
@@ -192,13 +189,13 @@ namespace School.Web.Controllers
                 pictureFinalPath = picturePath + pictureName;
 
                 //判断传在线地址还是文件地址
-                if (htmlName == null)
+                if (fileName != null)
                 {
                     result = await _schoolContracts.NewsSave(dto, PicturePath + pictureName, FilePath + fileName, imgsNames);
                 }
                 else
                 {
-                    result = await _schoolContracts.NewsSave(dto, PicturePath + pictureName, HtmlPath + htmlName, imgsNames);
+                    result = await _schoolContracts.NewsSave(dto, PicturePath + pictureName, null, imgsNames);
                 }
 
                 // 根据返回内容判断是否存图片等数据
@@ -213,19 +210,19 @@ namespace School.Web.Controllers
             }
             else
             {
-                if (htmlName == null)
+                if (fileName != null)
                 {
                     result = await _schoolContracts.NewsSave(dto, FilePath + fileName, imgsNames);
                 }
                 else
                 {
-                    result = await _schoolContracts.NewsSave(dto, HtmlPath + htmlName, imgsNames);
+                    result = await _schoolContracts.NewsSave(dto, null, imgsNames);
                 }
             }
             
             if (result.Type == AjaxResultType.Success)
             {
-                if (htmlName == null)
+                if (fileName != null)
                 {
                     using (FileStream fs = System.IO.File.Create(filePath + fileName))
                     {
@@ -233,12 +230,7 @@ namespace School.Web.Controllers
                         fs.Flush();
                     }
                 }
-                else
-                {
-                    System.IO.File.AppendAllText(htmlPath + htmlName, dto.NewsContent, Encoding.UTF8);
-                }
-                //result.Data = bmp;
-                if(Imgs!=null)
+                if(Imgs != null)
                 {
                     foreach (var img in Imgs)
                     {
@@ -250,6 +242,23 @@ namespace School.Web.Controllers
                     }
                 }
             }
+            return result;
+        }
+
+        ///<summary>
+        ///编辑修改已有新闻
+        ///</summary>
+        [HttpPost]
+        public async Task<AjaxResult> NewsEdit( [FromForm] NewsSaveDto dto)
+        {
+            var webRootPath = _hostingEnvironment.WebRootPath;
+            AjaxResult result = new();
+            var newsId = dto.NewsId;
+            if(dto.NewsCoverType == "图片")
+            {
+
+            }
+            result = await _schoolContracts.NewsEdit(dto, newsId, webRootPath);
             return result;
         }
 

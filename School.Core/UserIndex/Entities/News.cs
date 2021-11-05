@@ -7,7 +7,7 @@ namespace School.Core.UserIndex.Entities
     {
         public string NewsName { get; set; }
         public string NewsWriter { get; set; }
-        public string NewsContentAddress { get; set; }
+        public string NewsContent { get; set; }
         public string NewsImgsAddress { get; set; }
         public string NewsFileAddress { get; set; }
         public string NewsCoverType { get; set; }
