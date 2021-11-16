@@ -26,19 +26,50 @@ namespace School.Web.Controllers
             _hostingEnvironment = hostingEnvironment;
         }
 
-        //[HttpPost]
-        //public AjaxResult UpLoadHtmlPictures(List<string> pictureUrls)
-        //{
-        //    AjaxResult result = new();
-        //    var webRootPath = _hostingEnvironment.WebRootPath;
-        //    var now = DateTime.Now;
-        //    var pictureUrlsPath = string.Format("/Resource/News/HtmlFiles/HtmlPictures/{0}/{1}/{2}", now.ToString("yyyy"), now.ToString("MM"), now.ToString("dd"));
-        //    foreach (var pu in pictureUrls)
-        //    {
+        [HttpPost]
+        public AjaxResult UpLoadHtmlPictures([FromForm]List<IFormFile> pictureUrls)
+        {
+            AjaxResult result = new();
+            List<string> imgUrls = new();
+            var webRootPath = _hostingEnvironment.WebRootPath;
+            var now = DateTime.Now;
+            var pictureUrlsPath = string.Format("/Resource/News/HtmlFiles/HtmlPictures/{0}/{1}/{2}/", now.ToString("yyyy"), now.ToString("MM"), now.ToString("dd"));
+            
+            const string imgFit = ".jpg|.jpeg|.png|.gif" ;
 
-        //    }
-        //    return result;
-        //} 
+            if(!Directory.Exists(webRootPath + pictureUrlsPath))
+            {
+                Directory.CreateDirectory(webRootPath + pictureUrlsPath);
+            }
+            foreach (var pu in pictureUrls)
+            {
+                string imgName = null;
+                var dateStr = DateTime.Now.ToString("yyMMddhhmmssfff");
+                var numStr = Convert.ToString(new Random().Next(10, 99));
+                var pE = Path.GetExtension(pu.FileName);                
+
+                if(imgFit.IndexOf(pE.ToLower(), StringComparison.Ordinal) <= -1)
+                {
+                    result.Type = AjaxResultType.Error;
+                    result.Content = "请上传.jpg|.jpeg|.png|.gif格式的图片";
+                }
+                else
+                {
+                    imgName = dateStr + numStr + pE;
+                }
+                if(imgName != null)
+                {
+                    using (FileStream fs = System.IO.File.Create(webRootPath + pictureUrlsPath + imgName))
+                    {
+                        pu.CopyTo(fs);
+                        fs.Flush();
+                    }
+                    imgUrls.Add("https://localhost:13001" + pictureUrlsPath + imgName);
+                } 
+            }
+            result.Data = imgUrls;
+            return result;
+        }
 
         [HttpGet]
         public AjaxResult GetNewsTypes()
@@ -280,6 +311,14 @@ namespace School.Web.Controllers
         {
             AjaxResult result;
             result = _schoolContracts.ShowNews();
+            return result;
+        }
+
+        [HttpPost]
+        public AjaxResult DeleteNews(int? newsId)
+        {
+            AjaxResult result = new();
+
             return result;
         }
     }

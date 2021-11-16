@@ -12,6 +12,7 @@ namespace School.Data
         public string PhoneNumber { get; set; }
         public string HeadImg { get; set; }
         public string Roles { get; set; }
+        public string Departments { get; set; }
         public List<string> Claims { get; set; }
         IEnumerator<string> IEnumerable<string>.GetEnumerator()
         {

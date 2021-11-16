@@ -13,6 +13,7 @@ namespace SchoolCore.Entities
         public DateTime? BirthDate { get; set; }
         public string IdCardNumber { get; set; }
         public int Age { get; set; }
+        public virtual Department UserDepartment { get; set; }
         public virtual Academic UserAcademic { get; set; }
         public string PhoneNumber { get; set; }
         public string HeadPictureAddress { get; set; }

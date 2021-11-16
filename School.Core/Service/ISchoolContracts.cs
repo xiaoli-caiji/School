@@ -16,16 +16,20 @@ namespace SchoolCore.Service
     {
         Task<AjaxResult> UserLogin(UserInputDto dto);
         Task<AjaxResult> UserLogout();
+        AjaxResult GetUnits();
         Task<AjaxResult> StudentRegistration(StudentRegistrationDto student);
         Task<AjaxResult> TeachingTeacherRegistration(TeachingTeacherRegistrationDto teachingTeacher);
         Task<AjaxResult> OfficeTeacherRegistration(OfficeTeacherRegistrationDto officeTeacher);
         Task<AjaxResult> OtherStuffRegistration(OtherStuffRegistrationDto otherStuff);
         Task<AjaxResult> Settings(UserSelfSettingDto dto, string path);
-        Task<AjaxResult> GetCourses(CourseInputDto course);
+        Task<AjaxResult> BrowseCourse(CourseInputDto course);
         Task<AjaxResult> ChooseCourses(CourseChooseDto dto);
+        Task<AjaxResult> GetCourses(string userCode);
+        Task<AjaxResult> ModifyPercentage(List<CourseChooseDto> dtos);
+        Task<AjaxResult> DeleteCourse(string courseCode, string userCode);
         Task<AjaxResult> GetReportCard(string userCode);
-        Task<AjaxResult> HasChoosen(UserInputDto user);
         Task<AjaxResult> CourseAndStudent(string teacherCode);
+        Task<AjaxResult> WinCourse();
         Task<List<AjaxResult>> InputReportCard([FromBody]List<InputReportCardsDto> reportCards);
         AjaxResult GetNewsTypes();
         Task<AjaxResult> NewsSave(NewsSaveDto newsDto, string pictureAddress, string newsFileAddress, string filImgsAddress);

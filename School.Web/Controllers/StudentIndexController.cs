@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using School.Core.UserIndex.Dtos.StudentsDtos;
@@ -21,14 +22,14 @@ namespace School.Web.Area.Students.Controllers
         }
 
         ///<summary>
-        ///查询课表
+        ///点击查询课表
         ///有下拉选择学院、输入老师名、输入课程名三种查询框，
         ///注意传进来的是实体，返回的是列表
         ///</summary>
         [HttpPost]
         public async Task<AjaxResult> BrowseCourse([FromBody] CourseInputDto course)
         {
-            var courses = await _schoolContracts.GetCourses(course);
+            var courses = await _schoolContracts.BrowseCourse(course);
             return courses;
         }
 
@@ -52,16 +53,26 @@ namespace School.Web.Area.Students.Controllers
         ///获取已选课程
         ///</summary>
         [HttpGet]
-        public async Task<AjaxResult> HasChoosen([FromBody] UserInputDto user)
+        public async Task<AjaxResult> GetCourses(string userCode)
         {
             AjaxResult result = new();
-            if(user.UserCode!= null)
+            if(userCode != null)
             {
-                result = await _schoolContracts.HasChoosen(user);
+                result = await _schoolContracts.GetCourses(userCode);
             }
             return result;
         }
 
+        ///<summary>
+        ///修改已选课程百分比
+        ///</summary>
+        [HttpPost]
+        public async Task<AjaxResult> ModifyPercentage([FromBody] List<CourseChooseDto> dtos)
+        {
+            AjaxResult result = new();
+            result = await _schoolContracts.ModifyPercentage(dtos);
+            return result;
+        }
 
         /// <summary>
         /// 获取成绩单
@@ -73,6 +84,20 @@ namespace School.Web.Area.Students.Controllers
         {
             var reportsCards = await _schoolContracts.GetReportCard(urlCode);
             return reportsCards;
+        }
+
+        ///<summary>
+        ///删除已选课程
+        ///</summary>
+        [HttpPost]
+        public async Task<AjaxResult> DeleteCourse([FromBody]CourseChooseDto dto)
+        {
+            AjaxResult result = new();
+            if (dto.CourseCode != null && dto.UserCode != null)
+            {
+                result = await _schoolContracts.DeleteCourse(dto.CourseCode, dto.UserCode);
+            }            
+            return result;
         }
 
 

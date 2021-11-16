@@ -286,9 +286,6 @@ namespace School.Web.Migrations
                     b.Property<DateTime?>("BirthDate")
                         .HasColumnType("datetime(6)");
 
-                    b.Property<int?>("DepartmentId")
-                        .HasColumnType("int");
-
                     b.Property<string>("HeadPictureAddress")
                         .HasColumnType("longtext");
 
@@ -313,13 +310,16 @@ namespace School.Web.Migrations
                     b.Property<string>("UserCode")
                         .HasColumnType("longtext");
 
+                    b.Property<int?>("UserDepartmentId")
+                        .HasColumnType("int");
+
                     b.HasKey("Id");
 
                     b.HasIndex("AClassId");
 
-                    b.HasIndex("DepartmentId");
-
                     b.HasIndex("UserAcademicId");
+
+                    b.HasIndex("UserDepartmentId");
 
                     b.ToTable("Users");
                 });
@@ -353,6 +353,15 @@ namespace School.Web.Migrations
                         .HasColumnType("int");
 
                     b.Property<int>("CourseId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("CourseState")
+                        .HasColumnType("longtext");
+
+                    b.Property<int>("Percentage")
+                        .HasColumnType("int");
+
+                    b.Property<int>("PercentageLeft")
                         .HasColumnType("int");
 
                     b.Property<int>("UserId")
@@ -470,15 +479,17 @@ namespace School.Web.Migrations
                         .WithMany("AclassUsers")
                         .HasForeignKey("AClassId");
 
-                    b.HasOne("SchoolCore.Entities.Department", null)
-                        .WithMany("DepartmentUsers")
-                        .HasForeignKey("DepartmentId");
-
                     b.HasOne("SchoolCore.Entities.Academic", "UserAcademic")
                         .WithMany("AcademicUsers")
                         .HasForeignKey("UserAcademicId");
 
+                    b.HasOne("SchoolCore.Entities.Department", "UserDepartment")
+                        .WithMany("DepartmentUsers")
+                        .HasForeignKey("UserDepartmentId");
+
                     b.Navigation("UserAcademic");
+
+                    b.Navigation("UserDepartment");
                 });
 
             modelBuilder.Entity("SchoolCore.Entities.UserClaim", b =>

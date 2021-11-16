@@ -39,7 +39,7 @@ namespace IdentityServer
             var myUserClaim = new IdentityResource(
                 name: "myUserClaim",
                 displayName: "User Profile",
-                userClaims: new[] { "role", "birthdate", "picture", "phone_number" });
+                userClaims: new[] { "role", "birthdate", "picture", "phone_number", "department" });
         
             return new List<IdentityResource>
             {

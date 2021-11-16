@@ -20,6 +20,7 @@ using System.IO;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.Text;
+using EntityConfigurationBase;
 
 namespace SchoolCore.Service
 {
@@ -162,6 +163,27 @@ namespace SchoolCore.Service
         #endregion
 
         #region 用户注册系统
+
+        ///<summary>
+        ///获取学院班级和部门返回给前端做选择列表
+        ///</summary>
+        public AjaxResult GetUnits()
+        {
+            AjaxResult result = new();
+
+            var classes = _aClassRepository.GetEntities<AClass>(c => c.AClassName != null).Select(c=>c.AClassName).ToList();
+            var departments = _departmentRepository.GetEntities<Department>(d => d.DepartmentName != null).Select(d => d.DepartmentName).ToList();
+            var academics = _academicRepository.GetEntities<Academic>(a => a.AcademicName != null).Select(a => a.AcademicName).ToList();
+
+            Dictionary<string, List<string>> data = new();
+            data.Add("academic", academics);
+            data.Add("class", classes);
+            data.Add("department", departments);
+
+            result.Data = data;
+            return result;
+        }
+
         /// <summary>
         /// 学籍注册，记得检查相关表的信息
         /// </summary>
@@ -518,13 +540,15 @@ namespace SchoolCore.Service
         #endregion
 
         #region 查选课系统
+
         /// <summary>
-        /// 查课
+        /// 查课,数据筛选在后端做，比较安全，且适用于数据量大的情况
         /// </summary>
         /// <param name="course"></param>
         /// <returns>返回列表</returns>
-        public async Task<AjaxResult> GetCourses(CourseInputDto course)
+        public async Task<AjaxResult> BrowseCourse(CourseInputDto course)
         {
+            int courseId = 0;
             List<Course> browseCourse = new();//查询结果
             List<CourseOutputDto> coursesList = new();//返回数据结果
             CourseOutputDto course1 = new()
@@ -533,40 +557,60 @@ namespace SchoolCore.Service
             };
             AcademicCourse academicCourse = new();
             List<string> content = new();
+            IQueryable<Course> beforeCourse;
             //按照从左到右的顺序分别写三个if语句，就可以避免写6种情况了
             if (!string.IsNullOrEmpty(course.AcademicName))
             {
-                //academicCourse.Academic = await _academicRepository.GetEntities<Academic>(a => a.AcademicName == course.AcademicName).FirstOrDefaultAsync();
                 var academicID = _academicRepository.GetEntities<Academic>(a => a.AcademicName == course.AcademicName).FirstOrDefault().Id;
                 var courseIds = _academicCourseRepository.GetEntities<AcademicCourse>(ac => ac.AcademicId == academicID).Select(c => c.CourseId).ToList();
-                browseCourse.AddRange(_courseRepository.GetEntities<Course>(c => courseIds.Contains(c.Id)).Include(c=>c.TeachingTeacher));
-                //browseCourse.AddRange(await _courseRepository.GetEntities<Course>(c => c.CourseAcademic.Where(ca=>ca.Academic.AcademicName==course.AcademicName)).ToListAsync());
+                // beforeCourse = _courseRepository.GetEntities<Course>(c => courseIds.Contains(c.Id)).Include(c => c.TeachingTeacher);
+                browseCourse = _courseRepository.GetEntities<Course>(c => courseIds.Contains(c.Id)).Include(c => c.TeachingTeacher).ToList();
             }
             if (!string.IsNullOrEmpty(course.TeachingTeacher))
             {
-                browseCourse.AddRange(await _courseRepository.GetEntities<Course>(c => c.TeachingTeacher.Name == course.TeachingTeacher).Include(c=>c.TeachingTeacher).ToListAsync());
+                // beforeCourse = browseCourse.AsQueryable().Where(c => c.TeachingTeacher.Name == course.TeachingTeacher).Include(c => c.TeachingTeacher);
+                browseCourse = browseCourse.AsQueryable().Where(c => c.TeachingTeacher.Name == course.TeachingTeacher).Include(c => c.TeachingTeacher).ToList();
             }
             if (!string.IsNullOrEmpty(course.CourseName))
             {
-                browseCourse.AddRange(await _courseRepository.GetEntities<Course>(c => c.CourseName == course.CourseName).Include(c => c.TeachingTeacher).ToListAsync());
+                browseCourse = browseCourse.AsQueryable().Where(c => c.CourseName.IndexOf(course.CourseName) != -1).Include(c => c.TeachingTeacher).ToList();
             }
             //还是要从数据库查询，规避掉传入参数为空的情况，不许偷懒！aCourse是Course对象
             foreach (var aCourse in browseCourse)
             {
-                course1 = _mapper.Map<CourseOutputDto>(aCourse);
-                var academicIds = _academicCourseRepository.GetEntities<AcademicCourse>(ac => ac.CourseId == aCourse.Id).Select(ac => ac.AcademicId).ToList();
-                var user = _userRepository.GetEntities<User>(u => u.UserCode == course.UserCode).FirstOrDefault();
-                course1.Academics = _academicRepository.GetEntities<Academic>(a => academicIds.Contains(a.Id)).Where(a => a.AcademicName != null).Select(a => a.AcademicName).ToList();                
-                course1.TeachingTeacher = aCourse.TeachingTeacher.Name;                
-                if(_userCourseRepository.GetEntities<UserCourse>(uc=>uc.UserId == user.Id && uc.CourseId == aCourse.Id).Any())
+                if(aCourse.Id != courseId)
                 {
-                    course1.ChoosenOrNot = "已选";
+                    course1 = _mapper.Map<CourseOutputDto>(aCourse);
+                    var academicIds = _academicCourseRepository.GetEntities<AcademicCourse>(ac => ac.CourseId == aCourse.Id).Select(ac => ac.AcademicId).ToList();
+                    var user = _userRepository.GetEntities<User>(u => u.UserCode == course.UserCode).FirstOrDefault();
+
+                    var percentLeftList = _userCourseRepository.GetEntities<UserCourse>(uc => uc.UserId == user.Id).Select(uc => uc.PercentageLeft).ToList();
+                    if (percentLeftList.Count != 0)
+                    {
+                        course1.PercentageLeft = percentLeftList.Min();
+                    }
+                    else
+                    {
+                        course1.PercentageLeft = 100;
+                    }
+
+                    course1.Academics = _academicRepository.GetEntities<Academic>(a => academicIds.Contains(a.Id)).Where(a => a.AcademicName != null).Select(a => a.AcademicName).ToList();
+                    course1.TeachingTeacher = aCourse.TeachingTeacher.Name;
+                    var userCourse = _userCourseRepository.GetEntities<UserCourse>(uc => uc.UserId == user.Id && uc.CourseId == aCourse.Id).FirstOrDefault();
+                    
+                    if (userCourse != null)
+                    {
+                        course1.ChoosenOrNot = "已选";
+                        course1.Percentage = userCourse.Percentage;                        
+                    }
+                    else
+                    {
+                        course1.ChoosenOrNot = "未选";
+                    }
+                    coursesList.Add(course1);
+                    courseId = aCourse.Id;
                 }
-                else
-                {
-                    course1.ChoosenOrNot = "未选";
-                }
-                coursesList.Add(course1);
+                
             }
             return new AjaxResult("查询成功！", coursesList, AjaxResultType.Success);
         }
@@ -581,14 +625,26 @@ namespace SchoolCore.Service
         {
             //选课成功，选课人数+1
             AjaxResult result = new();
+
             if (await _courseRepository.GetEntities<Course>(c => c.CourseCode == dto.CourseCode).AnyAsync())
             {
                 var course = await _courseRepository.GetEntities<Course>(c => c.CourseCode == dto.CourseCode).FirstOrDefaultAsync();
-                var user = await _userRepository.GetEntities<Course>(u => u.UserCode == dto.UserCode).FirstOrDefaultAsync();
+                var user = await _userRepository.GetEntities<User>(u => u.UserCode == dto.UserCode).FirstOrDefaultAsync();
                 UserCourse userCourse = new();
-                course.CourseChoosenNumber += 1;
+                var percentLeftList = _userCourseRepository.GetEntities<UserCourse>(uc => uc.UserId == user.Id).Select(uc => uc.PercentageLeft).ToList();
+                if(percentLeftList.Count == 0)
+                {
+                    userCourse.PercentageLeft = 100 - dto.Percentage;
+                }
+                else
+                {
+                    userCourse.PercentageLeft = percentLeftList.Min() - dto.Percentage;
+                }               
+                course.CourseChoosenNumber = _userCourseRepository.GetEntities<UserCourse>(uc => uc.CourseId == course.Id).Count() +1;
                 userCourse.User = user;
                 userCourse.Course = course;
+                userCourse.CourseState = "等待结果";
+                userCourse.Percentage = dto.Percentage;
                 if(!await _userCourseRepository.GetEntities<UserCourse>(uc=>uc.UserId == user.Id && uc.CourseId == course.Id).AnyAsync())
                 {
                     result = await _userCourseRepository.ChangeEntitiesAsync(userCourse);
@@ -603,12 +659,152 @@ namespace SchoolCore.Service
 
         ///<summary>
         ///查看已选课程
-        ///</summary>
-        
-        public async Task<AjaxResult> HasChoosen(UserInputDto user)
+        ///</summary>        
+        public async Task<AjaxResult> GetCourses(string userCode)
         {
-            var myChoosenCourse = await _userCourseRepository.GetEntities<UserCourse>(uc => uc.User.UserCode == user.UserCode).ToListAsync();
-            return new AjaxResult("查询成功！", AjaxResultType.Success, myChoosenCourse);
+            var userId = _userRepository.GetEntities<User>(u => u.UserCode == userCode).Select(u => u.Id).FirstOrDefault();
+            var myChoosenCourse = await _userCourseRepository.GetEntities<UserCourse>(uc => uc.UserId == userId).Include(uc=>uc.Course).ThenInclude(c => c.TeachingTeacher).ToListAsync();          
+            List<CourseOutputDto> choosenCourses = new();
+            foreach(var c in myChoosenCourse)
+            {
+                var course = _mapper.Map<CourseOutputDto>(c.Course);
+                var academicIds = _academicCourseRepository.GetEntities<AcademicCourse>(ac => ac.CourseId == c.Course.Id).Select(ac => ac.AcademicId).ToList();
+                course.Academics = _academicRepository.GetEntities<Academic>(a => academicIds.Contains(a.Id)).Select(a => a.AcademicName).ToList();
+                course.TeachingTeacher = c.Course.TeachingTeacher.Name;
+                course.Percentage = c.Percentage;
+                course.CourseState = c.CourseState;
+                choosenCourses.Add(course);
+            }
+            return new AjaxResult("查询成功！", AjaxResultType.Success, choosenCourses);
+        }
+
+        ///<summary>
+        ///修改选课百分占比
+        ///</summary>
+        public async Task<AjaxResult> ModifyPercentage(List<CourseChooseDto> dtos)
+        {
+            AjaxResult result = new();
+            List<AjaxResult> results = new();
+            int percentageLeft = 100;
+            foreach(var dto in dtos)
+            {
+                var user = _userRepository.GetEntities<User>(u => u.UserCode == dto.UserCode).FirstOrDefault();
+                var percentageList = _userCourseRepository.GetEntities<UserCourse>(uc => uc.UserId == user.Id).Select(uc => uc.PercentageLeft).ToList();
+                var course = _courseRepository.GetEntities<Course>(c => c.CourseCode == dto.CourseCode).FirstOrDefault();
+                var userCourse = _userCourseRepository.GetEntities<UserCourse>(uc => uc.UserId == user.Id && uc.CourseId == course.Id).FirstOrDefault();
+                percentageLeft -= dto.Percentage;
+                userCourse.PercentageLeft = percentageLeft;
+                userCourse.Percentage = dto.Percentage;
+                var r = await _userCourseRepository.ChangeEntitiesAsync(userCourse);
+                results.Add(r);
+            }
+            result.Data = results;
+            return result;
+        }
+
+        ///<summary>
+        ///删除选课，注意选课人数的变化
+        ///</summary>        
+        public async Task<AjaxResult> DeleteCourse(string courseCode, string userCode)
+        {
+            AjaxResult result = new();
+
+            var course = _courseRepository.GetEntities<Course>(c => c.CourseCode == courseCode).FirstOrDefault();
+            var user = _userRepository.GetEntities<User>(u => u.UserCode == userCode).FirstOrDefault();
+            var userCourse = _userCourseRepository.GetEntities<UserCourse>(uc => uc.UserId == user.Id && uc.CourseId == course.Id).FirstOrDefault();
+
+            result = await _userCourseRepository.DeleteEntitiesAsync(userCourse);
+            if(result.Type == AjaxResultType.Success)
+            {
+                course.CourseChoosenNumber -= 1;
+                result = await _courseRepository.ChangeEntitiesAsync(course);
+            }
+
+            return result;
+        }
+
+        ///<summary>
+        ///模拟选课随机中签事件
+        ///先将概率从小到大排序，之后得到叠加概率的列表
+        ///然后随机抽取个数为课程容量的相异随机数
+        ///最后每个随机数对应的元素为：比该随机数大的最小概率对应的元素
+        ///</summary>
+        public async Task<AjaxResult> WinCourse()
+        {
+            AjaxResult result = new();            
+            var courseList = _courseRepository.GetEntities<Course>(c => c.CourseCode != null).ToList();
+
+            foreach(var course in courseList)
+            {
+                var courseWithStudentList = _userCourseRepository.GetEntities<UserCourse>(uc => uc.CourseId == course.Id && uc.CourseState == "等待结果").ToList();
+                if(courseWithStudentList.Count != 0)
+                {
+                    List<double> chances = new();
+                    List<double> randomNums = new();
+                    double chance = 0.0;
+                    //排完序了
+
+                    courseWithStudentList.Sort((x, y) => (x.Percentage).CompareTo(y.Percentage));
+
+                    //得到叠加的相对概率列表
+                    int percentageSum = 0;
+                    for (int i = 0; i < courseWithStudentList.Count; i++)
+                    {
+                        percentageSum += courseWithStudentList[i].Percentage;
+                    }
+
+                    foreach (var courseWithStudent in courseWithStudentList)
+                    {
+                        chance += Math.Round((double)courseWithStudent.Percentage / percentageSum, 4);
+                        chances.Add(chance);
+                    }
+
+                    //产生课程容量个随机数
+                    Random random = new();
+                    for (int i = 0; i < course.CourseCapacity; i++)
+                    {
+                        double num = random.NextDouble();
+                        if (!randomNums.Contains(num))
+                        {
+                            randomNums.Add(num);
+                        }
+                        else
+                        {
+                            i--;
+                        }
+                    }
+
+                    //将每个随机数与叠加的相对概率列表中的数比较，得到比该随机数大的最小的叠加概率对应的学生中签该课程
+                    foreach (var r in randomNums)
+                    {
+                        double difference = 1.0;
+                        int index = 0;
+                        for (int i = 0; i < chances.Count; i++)
+                        {
+                            if (chances[i] >= r && difference > chances[i] - r)
+                            {
+                                difference = chances[i] - r;
+                                index = i;
+                            }
+                        }
+                        courseWithStudentList[index].CourseState = "中签";
+                    }
+
+                    //更新学生选课中间表中的选课状态（将等待结果更改为中签和未中签）
+                    foreach (var courseWithStudent in courseWithStudentList)
+                    {
+                        if (courseWithStudent.CourseState != "中签")
+                        {
+                            courseWithStudent.CourseState = "未中签";
+                        }
+                        await _userCourseRepository.ChangeEntitiesAsync(courseWithStudent);
+                        // results.Add(await _userCourseRepository.ChangeEntitiesAsync(courseWithStudent));
+                    }
+                }
+                
+            }
+
+            return result;
         }
         #endregion
 
@@ -620,25 +816,36 @@ namespace SchoolCore.Service
         public async Task<AjaxResult> CourseAndStudent(string teacherCode)
         {
             AjaxResult result = new("查询成功！");
-            CourseAndStudentListDto dto = new()
-            {
-                CourseAndStudents = new(),
-                Courses = new()
-            };
-            List<CourseAndStudenDto> courseAndStudent = new();           
+
+            List<CourseAndStudentListDto> dto = new();
+
             var courseList = await _courseRepository.GetEntities<Course>(c => c.TeachingTeacher.UserCode == teacherCode).ToListAsync();
             if (courseList.Count != 0)
             {
                 foreach (var c in courseList)
                 {
-                    CourseAndStudenDto dto1 = new()
+                    CourseAndStudentListDto courseAndStudentListDto = new()
                     {
-                        Students = new()
-                    };
-                    dto1.CourseName = c.CourseName;
-                    dto1.Students = await _userCourseRepository.GetEntities<UserCourse>(uc => uc.CourseId == c.Id).Include(c => c.User).Select(uc => uc.User).ToListAsync();
-                    dto.CourseAndStudents.Add(dto1);
-                    dto.Courses.Add(dto1.CourseName);
+                        CourseAndStudents = new()
+                    };                    
+                    var students = await _userCourseRepository.GetEntities<UserCourse>(uc => uc.CourseId == c.Id).Include(c => c.User).Select(uc => uc.User).ToListAsync();
+                    foreach(var student in students)
+                    {
+                        CourseAndStudenDto courseAndStudenDto = new();
+                        var studentName = student.Name;
+                        var report = _reportCardsRepository.GetEntities<ReportCards>(r => r.CourseId == c.Id && r.UserId == student.Id).Select(r => r.Report).FirstOrDefault();
+                        if(report == null)
+                        {
+                            report = 0.0;
+                        }
+                        courseAndStudenDto.StudentName = studentName;
+                        courseAndStudenDto.StudentCode = student.UserCode;
+                        courseAndStudenDto.Report = report;
+
+                        courseAndStudentListDto.CourseAndStudents.Add(courseAndStudenDto);                                                
+                    }
+                    courseAndStudentListDto.CourseName = c.CourseName;
+                    dto.Add(courseAndStudentListDto);
                 }
             }
             result.Data = dto;
@@ -902,16 +1109,31 @@ namespace SchoolCore.Service
 
             //更改备选插图（有的话）,直接根据前台传过来的删除和新增的列表操作，避免了增减逻辑的漏洞
             string sAll = null;
-            List<string> sList = null;
+            List<string> sList = new();
             string spp = null;
-            string originPath = null;    
+            string originPath = null;
+            sAll = news.NewsImgsAddress;
+            if (sAll != null)
+            {
+                //获取原来的所有路径——长字符串
+                sList = sAll.Split(",").ToList();
+                originPath = sList[0].Remove(sList[0].LastIndexOf(".") - 17);
+            }
+            else if(sAll == null && newsDto.NewsContent == null)
+            {
+                var now = DateTime.Now;
+                originPath = string.Format("/Resource/News/FileImgs/{0}/{1}/{2}/", now.ToString("yyyy"), now.ToString("MM"), now.ToString("dd"));
+            }
+            else if(sAll == null && newsDto.NewsContent != null)
+            {
+                var now = DateTime.Now;
+                originPath = string.Format("/Resource/News/HtmlPictures/{0}/{1}/{2}/", now.ToString("yyyy"), now.ToString("MM"), now.ToString("dd"));
+            }
+            spp = rootPath + originPath;
             //先根据删除的列表删除对应的图片
             if (newsDto.DeletePicture != null)
             {
-                sAll = news.NewsImgsAddress;//获取原来的所有路径——长字符串
-                sList = sAll.Split(",").ToList();//要删除，所以肯定有原本的文件夹，不用做判断 
-                originPath = sList[0].Remove(sList[0].LastIndexOf(".") - 17);
-                spp = rootPath + sList[0].Remove(sList[0].LastIndexOf(".") - 17);
+                
                 DirectoryInfo directoryInfo = new(spp);
                 FileSystemInfo[] pictures = directoryInfo.GetFileSystemInfos();
                 foreach(var s in newsDto.DeletePicture)
@@ -945,7 +1167,11 @@ namespace SchoolCore.Service
                 }
                 
             }
-            news.NewsImgsAddress = string.Join(",", sList.ToArray());
+            if (sList.Count != 0)
+            {
+                news.NewsImgsAddress = string.Join(",", sList.ToArray());
+            }
+            
 
             result = await _newsRepository.ChangeEntitiesAsync(news);
             return result;

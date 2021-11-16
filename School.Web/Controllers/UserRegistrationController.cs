@@ -15,6 +15,15 @@ namespace School.Web.Controllers
         {
             _schoolContracts = schoolContracts;
         }
+
+        [HttpGet]
+        public AjaxResult GetUnits()
+        {
+            AjaxResult result = new();
+            result = _schoolContracts.GetUnits();
+            return result;
+        }
+
         [HttpPost]
         public async Task<AjaxResult> StudentRegistration([FromBody]StudentRegistrationDto student)
         {//弹窗的内容：Content，数据：data

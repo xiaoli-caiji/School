@@ -9,22 +9,23 @@ using System.Threading.Tasks;
 using Newtonsoft.Json;
 using IdentityModel;
 using School.Data;
-using System.IO;
-using System;
+using Microsoft.EntityFrameworkCore;
 
 namespace IdentityServer
 {
     public class SchoolProfileService : IProfileService
     {
         private readonly IRepository<UserRole> _userRoleRepository;
+        private readonly IRepository<User> _userRepository;
         /// <summary>
         /// Initializes a new instance of the <see cref="TestUserProfileService"/> class.
         /// </summary>
         /// <param name="users">The users.</param>
         /// <param name="logger">The logger.</param>
-        public SchoolProfileService(IRepository<UserRole> userRoleRepository)
+        public SchoolProfileService(IRepository<UserRole> userRoleRepository, IRepository<User> userRepository)
         {
             _userRoleRepository = userRoleRepository;
+            _userRepository = userRepository;
         }
 
         /// <summary>
@@ -39,7 +40,8 @@ namespace IdentityServer
                 List<Claim> claims = new List<Claim>();
                 var code = context.Subject.Claims.Where(s => s.Type == "sub").Select(s => s.Value).FirstOrDefault();
                 var userRole = _userRoleRepository.GetEntities<UserRole>(u => u.User.UserCode == code);
-                var user = userRole.Select(ur => ur.User).FirstOrDefault();
+                //var user = userRole.Select(ur => ur.User).Include(u => u.UserDepartment).FirstOrDefault();
+                var user = _userRepository.GetEntities<User>(u => u.UserCode == code).Include(u => u.UserDepartment).FirstOrDefault();
                 // user.UserRoles = (ICollection<UserRole>)userRole;
                 var rolesList = userRole.Select(ur => ur.Role.RoleName).ToList();
                 var roles = JsonConvert.SerializeObject(rolesList);
@@ -52,7 +54,8 @@ namespace IdentityServer
                         BirthDate = "birthdate",
                         PhoneNumber = "phone_number",
                         HeadImg = "picture",
-                        Roles = "role"
+                        Roles = "role",
+                        Departments = "department"
                     };
                     claims = BuildClaim(context.RequestedClaimTypes, user, roles);
                     //claims.Add(new Claim("name", user.Name));
@@ -73,7 +76,7 @@ namespace IdentityServer
         {
             List<Claim> claims = new List<Claim>();
 
-            List<Dictionary<string, string>> dics = null;
+            // List<Dictionary<string, string>> dics = null;
             foreach (var claim in requestedClaimTypes)
             {
                 switch (claim)
@@ -93,10 +96,6 @@ namespace IdentityServer
                     case JwtClaimTypes.Picture:
                         if (user.HeadPictureAddress != null)
                         {
-                            //FileStream fs = new(user.HeadPictureAddress,FileMode.Open,FileAccess.Read);
-                            //BinaryReader br = new(fs);
-                            //byte[] imgByte = br.ReadBytes((int)fs.Length);
-                            //var s = Convert.ToBase64String(imgByte);
                             claims.Add(new Claim(JwtClaimTypes.Picture, user.HeadPictureAddress));
                         }
                            
@@ -120,6 +119,12 @@ namespace IdentityServer
                             claims.Add(new Claim(JwtClaimTypes.Role, role));
                         else
                             claims.Add(new Claim(JwtClaimTypes.Role, ""));
+                        break;
+                    case "department":
+                        if (user.UserDepartment != null)
+                            claims.Add(new Claim("department", user.UserDepartment.DepartmentName));
+                        else
+                            claims.Add(new Claim("department", ""));
                         break;
                 }
             }

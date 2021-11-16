@@ -9,7 +9,8 @@ namespace School.Core.UserIndex.Dtos.StudentsDtos
 {
     public class CourseAndStudenDto
     {
-        public List<User> Students { get; set; }
-        public string CourseName { get; set; }
+        public string StudentName { get; set; }
+        public string StudentCode { get; set; }
+        public double? Report { get; set; }
     }
 }

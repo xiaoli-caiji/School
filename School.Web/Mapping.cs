@@ -14,6 +14,7 @@ namespace School.Web.MappingMapper
     {
         public MapperProfile()
         {
+            //CreateMap<object, object>();
             CreateMap<NewsSaveDto, News>();
             CreateMap<News, NewsSaveDto>();
             CreateMap<Course, CourseOutputDto>();
@@ -27,7 +28,7 @@ namespace School.Web.MappingMapper
             CreateMap<OfficeTeacherRegistrationDto, User>();
             CreateMap<User, OfficeTeacherRegistrationDto>();
             CreateMap<User, TestUser>();
-            
+
         }
         public int Id { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
     }

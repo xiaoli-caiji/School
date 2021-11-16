@@ -10,6 +10,6 @@ namespace School.Core.UserIndex.Dtos.StudentsDtos
     public class CourseAndStudentListDto
     {
         public List<CourseAndStudenDto> CourseAndStudents { get; set; }
-        public List<string> Courses { get; set; }
+        public string CourseName { get; set; }
     }
 }

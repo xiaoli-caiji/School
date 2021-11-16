@@ -34,5 +34,13 @@ namespace School.Web.Area.User.TeachingTeacher.Controllers
             var result = await _schoolContracts.InputReportCard(reportCards);
             return result;
         }
+
+        [HttpPost]
+        public async Task<AjaxResult> WinCourse()
+        {
+            AjaxResult result = new();
+            result = await _schoolContracts.WinCourse();
+            return result;
+        }
     }
 }
