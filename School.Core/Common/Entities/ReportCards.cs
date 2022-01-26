@@ -18,7 +18,7 @@ namespace School.Core.Common.Entities
         [ForeignKey("UserId")]
         public virtual User Student { get; set; }
         [ForeignKey("CourseId")]
-        public virtual Course Courses { get; set; }
+        public virtual Course Course { get; set; }
         public double? Report { get; set; }
     }
 }

@@ -1,5 +1,7 @@
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
+using School.Core.UserIndex.Dtos.StudentsDtos;
 using School.Data;
 using SchoolCore.Dtos;
 using SchoolCore.Service;
@@ -20,14 +22,14 @@ namespace School.Web.Area.Students.Controllers
         }
 
         ///<summary>
-        ///查询课表
+        ///点击查询课表
         ///有下拉选择学院、输入老师名、输入课程名三种查询框，
         ///注意传进来的是实体，返回的是列表
         ///</summary>
-        [HttpGet]
-        public async Task<AjaxResult> BrowseCourse(CourseOutputDto course)
+        [HttpPost]
+        public async Task<AjaxResult> BrowseCourse([FromBody] CourseInputDto course)
         {
-            var courses = await _schoolContracts.GetCourses(course);
+            var courses = await _schoolContracts.BrowseCourse(course);
             return courses;
         }
 
@@ -37,25 +39,65 @@ namespace School.Web.Area.Students.Controllers
         /// <param name="course">Course类的实体</param>
         /// <returns>选课结果弹框+页面</returns>
         [HttpPost]
-        public async Task<AjaxResult> ChoosenCourse(string courseCode)
+        public async Task<AjaxResult> ChoosenCourse([FromBody]CourseChooseDto dto)
         {
             AjaxResult result = new(); 
-            if(courseCode!=null)
+            if(dto.CourseCode != null)
             {
-                result = await _schoolContracts.ChooseCourses(courseCode);
-            }         
+                result = await _schoolContracts.ChooseCourses(dto);
+            }           
             return result;
         }
+
+        ///<summary>
+        ///获取已选课程
+        ///</summary>
+        [HttpGet]
+        public async Task<AjaxResult> GetCourses(string userCode)
+        {
+            AjaxResult result = new();
+            if(userCode != null)
+            {
+                result = await _schoolContracts.GetCourses(userCode);
+            }
+            return result;
+        }
+
+        ///<summary>
+        ///修改已选课程百分比
+        ///</summary>
+        [HttpPost]
+        public async Task<AjaxResult> ModifyPercentage([FromBody] List<CourseChooseDto> dtos)
+        {
+            AjaxResult result = new();
+            result = await _schoolContracts.ModifyPercentage(dtos);
+            return result;
+        }
+
         /// <summary>
         /// 获取成绩单
         /// 课程相关信息都是List,可以遍历
         /// </summary>
         /// <returns>成绩单页面</returns>
         [HttpGet]
-        public async Task<AjaxResult> GetReportCard()
+        public async Task<AjaxResult> GetReportCard(string urlCode)
         {
-            var reportsCards = await _schoolContracts.GetReportCard();
+            var reportsCards = await _schoolContracts.GetReportCard(urlCode);
             return reportsCards;
+        }
+
+        ///<summary>
+        ///删除已选课程
+        ///</summary>
+        [HttpPost]
+        public async Task<AjaxResult> DeleteCourse([FromBody]CourseChooseDto dto)
+        {
+            AjaxResult result = new();
+            if (dto.CourseCode != null && dto.UserCode != null)
+            {
+                result = await _schoolContracts.DeleteCourse(dto.CourseCode, dto.UserCode);
+            }            
+            return result;
         }
 
 

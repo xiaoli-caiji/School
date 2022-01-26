@@ -1,5 +1,4 @@
 using EntityConfigurationBase;
-using System;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace SchoolCore.Entities
@@ -12,6 +11,9 @@ namespace SchoolCore.Entities
         public virtual User User { get; set; }
         [ForeignKey("CourseId")]
         public virtual Course Course { get; set; }
+        public int Percentage { get; set; }
+        public string CourseState { get; set; }
+        public int PercentageLeft { get; set; }
 
     }
 }

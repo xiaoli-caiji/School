@@ -1,4 +1,5 @@
 using SchoolCore.Entities;
+using System.Collections.Generic;
 using System.ComponentModel;
 
 namespace SchoolCore.UserIndex.Dtos
@@ -18,7 +19,7 @@ namespace SchoolCore.UserIndex.Dtos
         [DisplayName("学院")]
         public string Academic { get; set; }
         [DisplayName("授课名称")]
-        public string Course { get; set; }
+        public List<string> Course { get; set; }
               
     }
 }
