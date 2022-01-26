@@ -234,6 +234,7 @@ namespace School.Web.Controllers
                 {
                     byte[] b = Convert.FromBase64String(dto.NewsCover.Substring(dto.NewsCover.IndexOf(",") + 1));
                     MemoryStream ms = new(b);
+                    ms.Position = 0;
                     Bitmap bmp = new(ms);
                     bmp.Save(pictureFinalPath, ImageFormat.Bmp);
                     ms.Close();

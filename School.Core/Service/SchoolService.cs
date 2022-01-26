@@ -206,12 +206,15 @@ namespace SchoolCore.Service
             {
                 int sexNumber = 0;
                 user = _mapper.Map<User>(student);
-                var studentNum = GetStudentType(student.Academic, student.Class, student.StudentType);
+                string studentClass = System.Text.RegularExpressions.Regex.Replace(student.Class, @"[^0-9]+", "");
+                studentClass = studentClass.Substring(2, studentClass.Length - 2);
+                var studentNum = GetStudentType(student.Academic, studentClass, student.StudentType);
                 user.UserCode = DateTime.Now.Year.ToString() + studentNum + student.Num;
                 if (await _userRepository.GetEntities<User>(u => u.UserCode == user.UserCode).AnyAsync())
                 {
                     errorReasonOrSuccess = "该学号已存在，请检查并重新输入！";
                 }
+
                 user.Password = student.IdCardNumber.Substring(student.IdCardNumber.Length - 7, 6);
                 sexNumber = int.Parse(student.IdCardNumber.Substring(student.IdCardNumber.Length - 2, 1));
                 user.Sex = (sexNumber % 2 == 0) ? "女" : "男";
@@ -219,7 +222,8 @@ namespace SchoolCore.Service
                 var birthDate = student.IdCardNumber.Substring(6, 8);
                 user.BirthDate = Convert.ToDateTime(birthDate.Substring(0, 4) + '-' + birthDate.Substring(4, 2) + '-' + birthDate.Substring(6, 2));
                 user.UserAcademic = _academicRepository.GetEntities<Academic>(a => a.AcademicName == student.Academic).FirstOrDefault();
-                var className = DateTime.Now.Year.ToString().Substring(DateTime.Now.Year.ToString().Length-2,2) + "级" + student.Academic + student.Class + "班";
+                var className = student.Class;
+                //var className = DateTime.Now.Year.ToString().Substring(DateTime.Now.Year.ToString().Length-2,2) + "级" + student.Academic + studentClass + "班";
                 var aClass = _aClassRepository.GetEntities<AClass>(a => a.AClassName == className).Include(a=>a.AclassUsers).FirstOrDefault();
                 if (aClass != null)
                 {
@@ -312,7 +316,8 @@ namespace SchoolCore.Service
                     studentType += "11";
                     break;
             }
-            studentType += aClass;
+            
+            studentType +=  aClass;
             return studentType;
         }
         /// <summary>
