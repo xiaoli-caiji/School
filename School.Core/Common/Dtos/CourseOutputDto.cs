@@ -23,6 +23,7 @@ namespace SchoolCore.Dtos
 
         [DisplayName("选课人数")]
         public int CourseChoosenNumber { get; set; }
+        public int CourseSelectionNumber { get; set; }
 
         [DisplayName("开课学院")]
         public List<string> Academics { get; set; }
@@ -39,6 +40,7 @@ namespace SchoolCore.Dtos
         public int Percentage { get; set; }
         public int PercentageLeft { get; set; }
         public string CourseState { get; set; }
+        public string CourseChoosenRounds { get; set; }
 
     }
 }

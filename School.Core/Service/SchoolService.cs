@@ -21,6 +21,7 @@ using System.Drawing;
 using System.Drawing.Imaging;
 using System.Text;
 using EntityConfigurationBase;
+using School.Core.UserIndex.Dtos.TeachingTeacherDtos;
 
 namespace SchoolCore.Service
 {
@@ -593,7 +594,7 @@ namespace SchoolCore.Service
                     {
                         course1.PercentageLeft = 100;
                     }
-
+                    course1.CourseChoosenRounds = aCourse.ChooseRounds;
                     course1.Academics = _academicRepository.GetEntities<Academic>(a => academicIds.Contains(a.Id)).Where(a => a.AcademicName != null).Select(a => a.AcademicName).ToList();
                     course1.TeachingTeacher = aCourse.TeachingTeacher.Name;
                     var userCourse = _userCourseRepository.GetEntities<UserCourse>(uc => uc.UserId == user.Id && uc.CourseId == aCourse.Id).FirstOrDefault();
@@ -601,7 +602,8 @@ namespace SchoolCore.Service
                     if (userCourse != null)
                     {
                         course1.ChoosenOrNot = "已选";
-                        course1.Percentage = userCourse.Percentage;                        
+                        course1.Percentage = userCourse.Percentage;
+                        course1.CourseState = userCourse.CourseState;
                     }
                     else
                     {
@@ -630,29 +632,36 @@ namespace SchoolCore.Service
             {
                 var course = await _courseRepository.GetEntities<Course>(c => c.CourseCode == dto.CourseCode).FirstOrDefaultAsync();
                 var user = await _userRepository.GetEntities<User>(u => u.UserCode == dto.UserCode).FirstOrDefaultAsync();
+
                 UserCourse userCourse = new();
                 var percentLeftList = _userCourseRepository.GetEntities<UserCourse>(uc => uc.UserId == user.Id).Select(uc => uc.PercentageLeft).ToList();
-                if(percentLeftList.Count == 0)
+                // 第一轮选课
+                if (course.ChooseRounds == null)
                 {
-                    userCourse.PercentageLeft = 100 - dto.Percentage;
+                    if (percentLeftList.Count == 0)
+                    {
+                        userCourse.PercentageLeft = 100 - dto.Percentage;
+                    }
+                    else
+                    {
+                        userCourse.PercentageLeft = percentLeftList.Min() - dto.Percentage;
+                    }
+                    course.CourseChoosenNumber = _userCourseRepository.GetEntities<UserCourse>(uc => uc.CourseId == course.Id && uc.CourseState != "中签1").Count() + 1;
+                    userCourse.User = user;
+                    userCourse.Course = course;
+                    userCourse.CourseState = "等待结果";                    
+                    userCourse.Percentage = dto.Percentage;
                 }
-                else
+                // 第二轮选课
+                else if(course.ChooseRounds == "2")
                 {
-                    userCourse.PercentageLeft = percentLeftList.Min() - dto.Percentage;
-                }               
-                course.CourseChoosenNumber = _userCourseRepository.GetEntities<UserCourse>(uc => uc.CourseId == course.Id).Count() +1;
-                userCourse.User = user;
-                userCourse.Course = course;
-                userCourse.CourseState = "等待结果";
-                userCourse.Percentage = dto.Percentage;
-                if(!await _userCourseRepository.GetEntities<UserCourse>(uc=>uc.UserId == user.Id && uc.CourseId == course.Id).AnyAsync())
-                {
-                    result = await _userCourseRepository.ChangeEntitiesAsync(userCourse);
+                    userCourse.CourseState = "中签2";
+                    course.CourseSelectionNumber += 1;
+                    userCourse.Course = course;
+                    userCourse.User = user;
                 }
-                else
-                {
-                    result.Content = "已选！";
-                }
+                
+                result = await _userCourseRepository.ChangeEntitiesAsync(userCourse);
             }
             return result;
         }
@@ -716,7 +725,20 @@ namespace SchoolCore.Service
             result = await _userCourseRepository.DeleteEntitiesAsync(userCourse);
             if(result.Type == AjaxResultType.Success)
             {
-                course.CourseChoosenNumber -= 1;
+                switch (userCourse.CourseState)
+                {
+                    case "等待结果":
+                        course.CourseChoosenNumber -= 1;
+                        break;
+                    case "中签1":
+                        course.CourseSelectionNumber -= 1;
+                        break;
+                    case "中签2":
+                        course.CourseSelectionNumber -= 1;
+                        break;
+                    case "未中签1":
+                        break;
+                }                
                 result = await _courseRepository.ChangeEntitiesAsync(course);
             }
 
@@ -724,88 +746,197 @@ namespace SchoolCore.Service
         }
 
         ///<summary>
+        ///老师获取课程，需要中间表的轮次和课程表的详细信息
+        ///</summary>
+        public AjaxResult GetCoursesByTeacher()
+        {
+            AjaxResult result = new();
+            Dictionary<string, List<CourseOutputDto>> coursesWithChooseRounds = new();
+            List<CourseOutputDto> coursesWithRoundOne = new();
+            List<CourseOutputDto> coursesWithRoundTwo = new();
+            List<CourseOutputDto> coursesChooseEnd = new();
+            var courseList = _courseRepository.GetEntities<Course>(c => c.Id != 0).Include(c => c.TeachingTeacher).Include(c => c.CourseAcademic).ThenInclude(ac => ac.Academic).ToList();
+            foreach(var course in courseList)
+            {
+                if(course.ChooseRounds == null)
+                {
+                    var c = _mapper.Map<CourseOutputDto>(course);
+                    //var ac = _academicCourseRepository.GetEntities<AcademicCourse>(ac => ac.CourseId == course.Id).Include(ac => ac.Academic);
+                    //c.Academics = ac.Select(ac => ac.Academic.AcademicName).ToList();
+                    c.Academics = course.CourseAcademic.Select(ac => ac.Academic.AcademicName).ToList();
+                    c.TeachingTeacher = course.TeachingTeacher.Name;
+                    coursesWithRoundOne.Add(c);
+                }
+                else if(course.ChooseRounds == "1" )
+                {
+                    var c = _mapper.Map<CourseOutputDto>(course);
+                    var ac = _academicCourseRepository.GetEntities<AcademicCourse>(ac => ac.CourseId == course.Id).Include(ac => ac.Academic);
+                    c.Academics = ac.Select(ac => ac.Academic.AcademicName).ToList();
+                    c.TeachingTeacher = course.TeachingTeacher.Name;
+                    coursesWithRoundTwo.Add(c);
+                }
+                else
+                {
+                    var c = _mapper.Map<CourseOutputDto>(course);
+                    var ac = _academicCourseRepository.GetEntities<AcademicCourse>(ac => ac.CourseId == course.Id).Include(ac => ac.Academic);
+                    c.Academics = ac.Select(ac => ac.Academic.AcademicName).ToList();
+                    c.TeachingTeacher = course.TeachingTeacher.Name;
+                    coursesChooseEnd.Add(c);
+                }
+            }
+            coursesWithChooseRounds.Add("One", coursesWithRoundOne);
+            coursesWithChooseRounds.Add("Two", coursesWithRoundTwo);
+            coursesWithChooseRounds.Add("End", coursesChooseEnd);
+
+            result.Data = coursesWithChooseRounds;
+            return result;
+        }
+
+
+        ///<summary>
         ///模拟选课随机中签事件
+        ///根据选课轮次操作
         ///先将概率从小到大排序，之后得到叠加概率的列表
         ///然后随机抽取个数为课程容量的相异随机数
         ///最后每个随机数对应的元素为：比该随机数大的最小概率对应的元素
         ///</summary>
-        public async Task<AjaxResult> WinCourse()
+        public async Task<AjaxResult> WinCourse(StartCourseSelectionDto dto)
         {
-            AjaxResult result = new();            
-            var courseList = _courseRepository.GetEntities<Course>(c => c.CourseCode != null).ToList();
+            AjaxResult result = new();
+            List<string> resultContents = new();
 
-            foreach(var course in courseList)
+            if (dto.ChooseRounds == "1")
             {
-                var courseWithStudentList = _userCourseRepository.GetEntities<UserCourse>(uc => uc.CourseId == course.Id && uc.CourseState == "等待结果").ToList();
-                if(courseWithStudentList.Count != 0)
+                var courseList = _courseRepository.GetEntities<Course>(c => dto.CourseCode.Contains(c.CourseCode)).ToList();
+                foreach (var course in courseList)
                 {
-                    List<double> chances = new();
-                    List<double> randomNums = new();
-                    double chance = 0.0;
-                    //排完序了
+                    var courseWithStudentList = _userCourseRepository.GetEntities<UserCourse>(uc => uc.CourseId == course.Id && uc.CourseState == "等待结果").ToList();
 
-                    courseWithStudentList.Sort((x, y) => (x.Percentage).CompareTo(y.Percentage));
-
-                    //得到叠加的相对概率列表
-                    int percentageSum = 0;
-                    for (int i = 0; i < courseWithStudentList.Count; i++)
+                    if (courseWithStudentList.Count != 0)
                     {
-                        percentageSum += courseWithStudentList[i].Percentage;
-                    }
+                        List<double> chances = new();
+                        List<double> randomNums = new();
+                        double chance = 0.0;
+                        //排完序了
 
-                    foreach (var courseWithStudent in courseWithStudentList)
-                    {
-                        chance += Math.Round((double)courseWithStudent.Percentage / percentageSum, 4);
-                        chances.Add(chance);
-                    }
+                        courseWithStudentList.Sort((x, y) => (x.Percentage).CompareTo(y.Percentage));
 
-                    //产生课程容量个随机数
-                    Random random = new();
-                    for (int i = 0; i < course.CourseCapacity; i++)
-                    {
-                        double num = random.NextDouble();
-                        if (!randomNums.Contains(num))
+                        //得到叠加的相对概率列表
+                        int percentageSum = 0;
+                        for (int i = 0; i < courseWithStudentList.Count; i++)
                         {
-                            randomNums.Add(num);
+                            percentageSum += courseWithStudentList[i].Percentage;
+                        }
+
+                        foreach (var courseWithStudent in courseWithStudentList)
+                        {
+                            chance += Math.Round((double)courseWithStudent.Percentage / percentageSum, 8);
+                            chances.Add(chance);
+                        }
+
+                        //产生课程容量个随机数
+                        Random random = new();
+                        for (int i = 0; i < course.CourseCapacity; i++)
+                        {
+                            double num = random.NextDouble();
+                            if (!randomNums.Contains(num))
+                            {
+                                randomNums.Add(num);
+                            }
+                            else
+                            {
+                                i--;
+                            }
+                        }
+
+                        //将每个随机数与叠加的相对概率列表中的数比较，得到比该随机数大的最小的叠加概率对应的学生中签该课程
+                        foreach (var r in randomNums)
+                        {
+                            double difference = 1.0;
+                            int index = 0;
+                            for (int i = 0; i < chances.Count; i++)
+                            {
+                                if (chances[i] >= r && difference > chances[i] - r)
+                                {
+                                    difference = chances[i] - r;
+                                    index = i;
+                                }
+                            }
+                            courseWithStudentList[index].CourseState = "中签1";
+                        }
+
+                        //更新学生选课中间表中的选课状态（将等待结果更改为中签和未中签）
+                        foreach (var courseWithStudent in courseWithStudentList)
+                        {
+                            if (courseWithStudent.CourseState != "中签1")
+                            {
+                                courseWithStudent.CourseState = "未中签1";
+                            }
+                            await _userCourseRepository.ChangeEntitiesAsync(courseWithStudent);
+                            // results.Add(await _userCourseRepository.ChangeEntitiesAsync(courseWithStudent));
+                        }
+
+
+                        var students = _userCourseRepository.GetEntities<UserCourse>(uc => uc.CourseId == course.Id && uc.CourseState == "中签1").ToList();
+                        if (students.Count <= course.CourseCapacity)
+                        {
+                            resultContents.Add("课程筛选完成！");
+                            course.ChooseRounds = "1";
+                            course.CourseSelectionNumber = students.Count;
+                            course.CourseChoosenNumber = 0;
                         }
                         else
                         {
-                            i--;
-                        }
-                    }
-
-                    //将每个随机数与叠加的相对概率列表中的数比较，得到比该随机数大的最小的叠加概率对应的学生中签该课程
-                    foreach (var r in randomNums)
-                    {
-                        double difference = 1.0;
-                        int index = 0;
-                        for (int i = 0; i < chances.Count; i++)
-                        {
-                            if (chances[i] >= r && difference > chances[i] - r)
+                            foreach (var cs in courseWithStudentList)
                             {
-                                difference = chances[i] - r;
-                                index = i;
+                                cs.CourseState = "等待结果";
+                                course.ChooseRounds = null;
+                                await _userCourseRepository.ChangeEntitiesAsync(cs);
                             }
+                            resultContents.Add("课程筛选失败！请重试！");
                         }
-                        courseWithStudentList[index].CourseState = "中签";
-                    }
-
-                    //更新学生选课中间表中的选课状态（将等待结果更改为中签和未中签）
-                    foreach (var courseWithStudent in courseWithStudentList)
-                    {
-                        if (courseWithStudent.CourseState != "中签")
-                        {
-                            courseWithStudent.CourseState = "未中签";
-                        }
-                        await _userCourseRepository.ChangeEntitiesAsync(courseWithStudent);
-                        // results.Add(await _userCourseRepository.ChangeEntitiesAsync(courseWithStudent));
+                        await _courseRepository.ChangeEntitiesAsync(course);
                     }
                 }
-                
             }
-
+            else if (dto.ChooseRounds == "2")
+            {
+                var courseList = _courseRepository.GetEntities<Course>(c => dto.CourseCode.Contains(c.CourseCode)).ToList();
+                foreach (var course in courseList)
+                {
+                    course.ChooseRounds = "2";
+                    var resultContent = await _courseRepository.ChangeEntitiesAsync(course);
+                    resultContents.Add(resultContent.Content);
+                }               
+            }
+            else
+            {
+                result.Content = "现在不在选课时间内！";
+                result.Type = AjaxResultType.Error;
+            }
+            result.Data = resultContents;
             return result;
         }
+
+        ///<summary>
+        ///关闭所有选课 =》 直接所有的课程的Rounds改成3就行了
+        ///</summary>
+
+        public async Task<AjaxResult> CourseSelectionClose()
+        {
+            AjaxResult result = new();
+            List<string> resultContents = new();
+            var courseList = _courseRepository.GetEntities<Course>(c => c.CourseCode != null).ToList();
+            foreach(var course in courseList)
+            {
+                course.ChooseRounds = "3";
+                var resultContent = await _courseRepository.ChangeEntitiesAsync(course);
+                resultContents.Add(resultContent.Content);
+            }
+            result.Data = resultContents;
+            return result;
+        }
+
         #endregion
 
         #region 成绩录入系统

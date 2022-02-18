@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using School.Core.UserIndex.Dtos;
 using School.Core.UserIndex.Dtos.OfficeTeacherDtos;
 using School.Core.UserIndex.Dtos.StudentsDtos;
+using School.Core.UserIndex.Dtos.TeachingTeacherDtos;
 using School.Data;
 using SchoolCore.Dtos;
 using SchoolCore.Entities;
@@ -29,7 +30,9 @@ namespace SchoolCore.Service
         Task<AjaxResult> DeleteCourse(string courseCode, string userCode);
         Task<AjaxResult> GetReportCard(string userCode);
         Task<AjaxResult> CourseAndStudent(string teacherCode);
-        Task<AjaxResult> WinCourse();
+        AjaxResult GetCoursesByTeacher();
+        Task<AjaxResult> WinCourse(StartCourseSelectionDto dto);
+        Task<AjaxResult> CourseSelectionClose();
         Task<List<AjaxResult>> InputReportCard([FromBody]List<InputReportCardsDto> reportCards);
         AjaxResult GetNewsTypes();
         Task<AjaxResult> NewsSave(NewsSaveDto newsDto, string pictureAddress, string newsFileAddress, string filImgsAddress);

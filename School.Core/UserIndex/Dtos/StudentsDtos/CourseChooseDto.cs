@@ -11,5 +11,6 @@ namespace School.Core.UserIndex.Dtos.StudentsDtos
         public string CourseCode { get; set; }
         public string UserCode { get; set; }
         public int Percentage { get; set; }
+        public DateTime? RoundTwoTime { get; set; }
     }
 }
