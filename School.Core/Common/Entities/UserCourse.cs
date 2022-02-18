@@ -1,4 +1,5 @@
 using EntityConfigurationBase;
+using System;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace SchoolCore.Entities
@@ -14,6 +15,7 @@ namespace SchoolCore.Entities
         public int Percentage { get; set; }
         public string CourseState { get; set; }
         public int PercentageLeft { get; set; }
+        public DateTime? RoundTwoTime { get; set; } 
 
     }
 }

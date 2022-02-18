@@ -2,15 +2,17 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SchoolCore;
 
 namespace School.Web.Migrations
 {
     [DbContext(typeof(MyDbContext))]
-    partial class MyDbContextModelSnapshot : ModelSnapshot
+    [Migration("20211116014128_DatabaseChange_21")]
+    partial class DatabaseChange_21
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -181,9 +183,6 @@ namespace School.Web.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
-                    b.Property<string>("ChooseRounds")
-                        .HasColumnType("longtext");
-
                     b.Property<int>("CourseCapacity")
                         .HasColumnType("int");
 
@@ -201,9 +200,6 @@ namespace School.Web.Migrations
 
                     b.Property<string>("CourseName")
                         .HasColumnType("longtext");
-
-                    b.Property<int>("CourseSelectionNumber")
-                        .HasColumnType("int");
 
                     b.Property<string>("CourseTime")
                         .HasColumnType("longtext");
@@ -358,6 +354,9 @@ namespace School.Web.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
+                    b.Property<string>("ChooseRounds")
+                        .HasColumnType("longtext");
+
                     b.Property<int>("CourseId")
                         .HasColumnType("int");
 
@@ -369,9 +368,6 @@ namespace School.Web.Migrations
 
                     b.Property<int>("PercentageLeft")
                         .HasColumnType("int");
-
-                    b.Property<DateTime?>("RoundTwoTime")
-                        .HasColumnType("datetime(6)");
 
                     b.Property<int>("UserId")
                         .HasColumnType("int");

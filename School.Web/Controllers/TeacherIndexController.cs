@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using School.Core.UserIndex.Dtos;
+using School.Core.UserIndex.Dtos.TeachingTeacherDtos;
 using School.Data;
 using SchoolCore.Service;
 using System.Collections.Generic;
@@ -35,11 +36,25 @@ namespace School.Web.Area.User.TeachingTeacher.Controllers
             return result;
         }
 
+        [HttpGet]
+        public AjaxResult GetCoursesByTeacher()
+        {
+            var result = _schoolContracts.GetCoursesByTeacher();
+            return result;
+        }
+
         [HttpPost]
-        public async Task<AjaxResult> WinCourse()
+        public async Task<AjaxResult> WinCourse([FromBody] StartCourseSelectionDto dto)
         {
             AjaxResult result = new();
-            result = await _schoolContracts.WinCourse();
+            result = await _schoolContracts.WinCourse(dto);
+            return result;
+        }
+
+        [HttpPost]
+        public async Task<AjaxResult> CourseSelectionClose()
+        {
+            var result = await _schoolContracts.CourseSelectionClose();
             return result;
         }
     }
